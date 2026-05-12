@@ -1,0 +1,242 @@
+{import os
+import time
+import json
+from datetime import datetime
+import streamlit as st
+import smtplib
+from email.message import EmailMessage
+
+# ═════════════════ CONFIGURATION & DATABASE ═════════════════
+APP_VERSION = "AILY OS v30000 — GREEN EMERALD CORE"
+DATABASE_FILE = "aily_database.json"
+RECEIVER_EMAIL = "garryboypepito2004@gmail.com"
+RECEIVER_AILYN = "ailyn_peps0678@yahoo.com"
+SENDER_EMAIL = "garryboypepito71@gmail.com"
+SENDER_PASSWORD = "fhyv cimp gync wjmj"
+
+# ═════════════════ PAGE CONFIG ═════════════════
+st.set_page_config(
+    page_title="Ailyn Construction Management",
+    page_icon="🏗️",
+    layout="wide",
+)
+
+# ═════════════════ DATABASE ENGINE ═════════════════
+def save_database():
+    data = {
+        "records": st.session_state.records,
+        "labor_records": st.session_state.labor_records,
+        "payroll_expenses": st.session_state.payroll_expenses,
+        "tools_records": st.session_state.tools_records,
+        "material_inventory": st.session_state.material_inventory,
+        "budget": st.session_state.budget,
+    }
+    with open(DATABASE_FILE, "w") as f:
+        json.dump(data, f, indent=4)
+
+def load_database():
+    if os.path.exists(DATABASE_FILE):
+        try:
+            with open(DATABASE_FILE, "r") as f:
+                data = json.load(f)
+                st.session_state.records = data.get("records", [])
+                st.session_state.labor_records = data.get("labor_records", [])
+                st.session_state.payroll_expenses = data.get("payroll_expenses", [])
+                st.session_state.tools_records = data.get("tools_records", [])
+                st.session_state.material_inventory = data.get("material_inventory", [])
+                st.session_state.budget = data.get("budget", 0.0)
+        except: pass
+
+# ═════════════════ SESSION STATE ═════════════════
+state_keys = {
+    "records": [],
+    "labor_records": [],
+    "payroll_expenses": [],
+    "tools_records": [],
+    "material_inventory": [],
+    "budget": 0.0,
+    "view": "home"
+}
+
+for key, default in state_keys.items():
+    if key not in st.session_state:
+        st.session_state[key] = default
+
+load_database()
+
+# ═════════════════ LOGIC FUNCTIONS ═════════════════
+def set_view(v):
+    st.session_state.view = v
+    st.rerun()
+
+def get_total_expenses():
+    return sum(r["amount"] for r in st.session_state.records if r["type"] in ["material", "expense"])
+
+def get_balance():
+    return st.session_state.budget - get_total_expenses()
+
+def project_ai_status():
+    bal = get_balance()
+    if bal > 50000: return "🟢 AI STATUS: STRONG FINANCIAL HEALTH"
+    elif bal > 10000: return "🟡 AI STATUS: MODERATE EXPENSE LEVEL"
+    else: return "🔴 AI STATUS: CRITICAL BUDGET WARNING"
+
+# ═════════════════ CSS: SPACE, CENTER & LOGO ═════════════════
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syncopate:wght@700&family=Inter:wght@400;900&display=swap');
+
+.stApp {
+    background: url("https://images.unsplash.com/photo-1600585154340-be6161a56a0c") no-repeat center center fixed;
+    background-size: cover;
+}
+
+.block-container {
+    background: rgba(10, 30, 20, 0.9) !important;
+    backdrop-filter: blur(15px);
+    border-radius: 25px;
+    border: 1px solid rgba(74, 222, 128, 0.3);
+}
+
+.logo-container {
+    text-align: center;
+    padding: 40px 0;
+}
+
+.logo-text {
+    font-family: 'Syncopate', sans-serif;
+    font-size: 50px !important;
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 15px;
+    text-shadow: 0 0 25px #4ade80;
+    margin: 0;
+}
+
+.logo-subtext {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    color: #a3e635;
+    text-transform: uppercase;
+    letter-spacing: 12px;
+    margin-top: 15px;
+    font-weight: bold;
+}
+
+[data-testid="stMetric"] {
+    background: rgba(15, 45, 30, 0.8);
+    border: 1px solid #4ade80;
+    border-radius: 15px;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ═════════════════ LOGO DISPLAY ═════════════════
+st.markdown(f"""
+<div class="logo-container">
+    <div class="logo-text">AILYN HOUSE</div>
+    <div style="font-size: 35px; color: #4ade80; margin: 10px 0; font-family: 'Syncopate';">PROJECT & PAYROLL</div>
+    <div class="logo-subtext">OPERATING ENGINE v30000</div>
+</div>
+""", unsafe_allow_html=True)
+
+# 🎛 SIDEBAR
+with st.sidebar:
+    st.markdown("## 📱 MOBILE CONTROL")
+    b_in = st.number_input("Set Budget", value=st.session_state.budget)
+    if st.button("APPLY & SAVE"):
+        st.session_state.budget = b_in
+        save_database()
+        st.rerun()
+    
+    st.markdown(f"""
+        <p style="text-align: center; letter-spacing: 5px; color: #a3e635; font-size: 12px; font-weight: bold; margin-top:15px; text-transform: uppercase;">
+            {datetime.now().strftime('%B %d, %Y')}
+        </p>
+    """, unsafe_allow_html=True)
+    st.divider()
+
+    if st.button("🏠 Home Dashboard", use_container_width=True): set_view("home")
+    if st.button("🧱 Add Material", use_container_width=True): set_view("material")
+    if st.button("👷 Labor & Payroll", use_container_width=True): set_view("labor")
+    if st.button("🔧 Tools Inventory", use_container_width=True): set_view("tools")
+    if st.button("📋 View Ledger", use_container_width=True): set_view("ledger")
+    
+    st.divider()
+    if st.button("🔄 RESET SYSTEM", use_container_width=True):
+        if os.path.exists(DATABASE_FILE): os.remove(DATABASE_FILE)
+        st.session_state.clear()
+        st.rerun()
+
+# 🖥 VIEW ROUTING
+view = st.session_state.view
+
+if view == "home":
+    st.success(project_ai_status())
+    col1, col2, col3 = st.columns(3)
+    col1.metric("BUDGET", f"₱{st.session_state.budget:,.2f}")
+    col2.metric("USED", f"₱{get_total_expenses():,.2f}")
+    col3.metric("BALANCE", f"₱{get_balance():,.2f}")
+
+elif view == "material":
+    st.subheader("🧱 MATERIAL ENTRY")
+    with st.form("mat_form", clear_on_submit=True):
+        n = st.text_input("Item Name")
+        p = st.number_input("Price", min_value=0.0)
+        q = st.number_input("Qty", min_value=1)
+        if st.form_submit_button("SAVE"):
+            st.session_state.records.append({
+                "date": datetime.now().strftime("%b %d"),
+                "name": n.upper(),
+                "amount": p * q,
+                "type": "material"
+            })
+            save_database()
+            st.success("Saved!")
+
+elif view == "labor":
+    st.subheader("👷 LABOR & PAYROLL")
+    with st.form("labor_form", clear_on_submit=True):
+        worker = st.text_input("Worker Name")
+        rate = st.number_input("Daily Rate", min_value=0.0)
+        days = st.number_input("Days Worked", min_value=1)
+        if st.form_submit_button("ADD TO PAYROLL"):
+            st.session_state.labor_records.append({
+                "name": worker.upper(),
+                "total": rate * days,
+                "date": datetime.now().strftime("%b %d")
+            })
+            save_database()
+            st.success("Worker added to payroll.")
+
+elif view == "tools":
+    st.subheader("🔧 TOOLS INVENTORY")
+    with st.form("tool_form", clear_on_submit=True):
+        tn = st.text_input("Tool Name")
+        tq = st.number_input("Quantity", min_value=1)
+        if st.form_submit_button("ADD TOOL"):
+            st.session_state.tools_records.append({"name": tn.upper(), "qty": tq})
+            save_database()
+            st.rerun()
+    for t in st.session_state.tools_records:
+        st.write(f"🛠️ {t['name']} - {t['qty']} units")
+
+elif view == "ledger":
+    st.subheader("📋 RECENT TRANSACTIONS")
+    for r in reversed(st.session_state.records):
+        st.markdown(f"**{r['date']}** | {r['name']} | ₱{r['amount']:,.2f}")
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "Launch Chrome against localhost",
+            "url": "http://localhost:8080",
+            "webRoot": "${workspaceFolder}"
+        }
+    ]
+}
