@@ -55,6 +55,9 @@ def total_materials():
 def total_expenses():
     return sum(r["amount"] for r in st.session_state.records if r["type"] == "expense")
 
+def total_excess():
+    return sum(r["amount"] for r in st.session_state.records if r["type"] == "excess")
+
 def get_total():
     return total_materials() + total_expenses()
 
@@ -89,11 +92,6 @@ def add_tx(name, price, qty, delivery, ttype, sender):
     })
     return True
 
-
-def total_tools():
-    return sum(r[""] for r in st.session_state.tools_records)
-
-
 def get_material_stock(item_name):
     stock_in = sum(r["stock_in"] for r in st.session_state.material_inventory if r["name"] == item_name)
     stock_out = sum(r["stock_out"] for r in st.session_state.material_inventory if r["name"] == item_name)
@@ -101,8 +99,6 @@ def get_material_stock(item_name):
 
 def material_names():
     return sorted(set(r["name"] for r in st.session_state.material_inventory))
-
-
 
 # ═════════════════ REPORT MANAGER (MATERIAL) ═════════════════
 def build_html_report(records, budget):
@@ -257,11 +253,8 @@ def build_html_report(records, budget):
     """
     return html
 
-
-
 # ═════════════════ INVENTORY HISTORY EXPORT ═════════════════
 def generate_inventory_html(material_inventory):
-
     html = """
     <html>
     <head>
@@ -295,7 +288,6 @@ def generate_inventory_html(material_inventory):
     <body>
     <div class="container">
     <h1>📦 MATERIAL INVENTORY HISTORY</h1>
-
     <table>
     <tr>
         <th>DATE</th>
@@ -305,10 +297,8 @@ def generate_inventory_html(material_inventory):
         <th>TOTAL</th>
     </tr>
     """
-
     for r in material_inventory:
         total = r["stock_in"] - r["stock_out"]
-
         html += f"""
         <tr>
             <td>{r['date']}</td>
@@ -318,14 +308,12 @@ def generate_inventory_html(material_inventory):
             <td>{total}</td>
         </tr>
         """
-
     html += """
     </table>
     </div>
     </body>
     </html>
     """
-
     return html
 
 # ═════════════════ REPORT MANAGER (PAYROLL) ═════════════════
@@ -333,7 +321,6 @@ def generate_payroll_html(labor_records, expense_records, remaining_money=0.0):
     date_str = datetime.now().strftime("%B %d, %Y | %I:%M %p")
     total_labor = sum(r['net'] for r in labor_records)
     total_expenses = sum(e['price'] for e in expense_records)
-    
     sub_total = total_labor + total_expenses
     grand_total = sub_total - remaining_money
 
@@ -341,7 +328,6 @@ def generate_payroll_html(labor_records, expense_records, remaining_money=0.0):
     <html>
     <body style="font-family: 'Segoe UI', sans-serif; background-color: #f4f7f6; padding: 40px;">
     <div style="max-width: 900px; margin: auto; background: white; border-top: 10px solid #1b5e20; padding: 40px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
             <tr>
                 <td>
@@ -356,9 +342,7 @@ def generate_payroll_html(labor_records, expense_records, remaining_money=0.0):
                 </td>
             </tr>
         </table>
-
         <div style="border-bottom: 2px solid #eee; margin-bottom: 30px;"></div>
-
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
             <thead>
                 <tr style="background-color: #1b5e20; color: white; text-transform: uppercase; font-size: 14px;">
@@ -371,7 +355,6 @@ def generate_payroll_html(labor_records, expense_records, remaining_money=0.0):
             </thead>
             <tbody>
     """
-
     for r in labor_records:
         html += f"""
                 <tr>
@@ -382,7 +365,6 @@ def generate_payroll_html(labor_records, expense_records, remaining_money=0.0):
                     <td style="padding: 12px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold; color: #1b5e20;">{r['net']:,.2f}</td>
                 </tr>
         """
-
     if expense_records:
         html += """
                 <tr>
@@ -400,18 +382,15 @@ def generate_payroll_html(labor_records, expense_records, remaining_money=0.0):
                     <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold;">{e['price']:,.2f}</td>
                 </tr>
             """
-
     html += f"""
             </tbody>
         </table>
-
         <table style="width: 100%; border-collapse: collapse; margin-top: 20px; margin-bottom: 30px;">
             <tr style="border-top: 2px solid #bbb;">
                 <td style="padding: 12px; font-weight: bold; text-align: right; font-size: 15px;">Subtotal Expenses:</td>
                 <td style="padding: 12px; width: 180px; text-align: right; font-weight: bold; font-size: 15px; color: #333;">PHP {sub_total:,.2f}</td>
             </tr>
     """
-
     if remaining_money > 0:
         html += f"""
             <tr style="border-bottom: 2px solid #bbb;">
@@ -419,10 +398,8 @@ def generate_payroll_html(labor_records, expense_records, remaining_money=0.0):
                 <td style="padding: 12px; width: 180px; text-align: right; font-weight: bold; color: #d32f2f; font-size: 15px;">-PHP {remaining_money:,.2f}</td>
             </tr>
         """
-
     html += f"""
         </table>
-
         <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
             <tr>
                 <td></td>
@@ -432,13 +409,11 @@ def generate_payroll_html(labor_records, expense_records, remaining_money=0.0):
                 </td>
             </tr>
         </table>
-
         <div style="text-align: center; margin-top: 60px; border-top: 1px solid #eee; padding-top: 20px;">
             <p style="color: #999; font-size: 11px; letter-spacing: 1px; text-transform: uppercase;">
                 THIS DOCUMENT WAS ELECTRONICALLY GENERATED AND IS VALID WITHOUT SIGNATURE.
             </p>
         </div>
-
     </div>
     </body>
     </html>
@@ -469,13 +444,11 @@ st.markdown("""
         flex-direction: column !important;
     }
 }
-
 .stApp {
     background: url("https://images.unsplash.com/photo-1600585154340-be6161a56a0c") no-repeat center center fixed;
     background-size: cover;
     background-position: center;
 }
-
 .block-container {
     background: rgba(20, 50, 35, 0.65) !important;
     backdrop-filter: blur(16px);
@@ -485,18 +458,15 @@ st.markdown("""
     padding: 24px;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-
 .block-container:hover {
     transform: scale(1.01);
     box-shadow: 0 16px 64px rgba(72, 239, 127, 0.15);
 }
-
 section[data-testid="stSidebar"] {
     background: rgba(10, 30, 20, 0.85) !important;
     backdrop-filter: blur(20px);
     border-right: 1px solid rgba(135, 255, 180, 0.1);
 }
-
 button {
     background: linear-gradient(145deg, #0b4e2f, #167a44);
     color: #ffffff !important;
@@ -506,18 +476,15 @@ button {
     font-weight: bold;
     min-height: 45px;
 }
-
 button:hover {
     transform: scale(1.02);
     box-shadow: 0 6px 18px rgba(72, 239, 127, 0.3);
     border-color: #a3e635;
     background: linear-gradient(145deg, #167a44, #14a44d);
 }
-
 button:active {
     transform: scale(0.98);
 }
-
 input, textarea, select {
     background: rgba(255, 255, 255, 0.08) !important;
     border: 1px solid rgba(135, 255, 180, 0.3) !important;
@@ -529,18 +496,15 @@ input, textarea, select {
     padding: 6px 12px;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-
 input:focus, textarea:focus, select:focus {
     border-color: #22c55e !important;
     box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
 }
-
 h1, h2, h3 {
     color: #4ade80 !important;
     text-shadow: 0 0 6px rgba(34, 197, 94, 0.3);
     letter-spacing: 0.5px;
 }
-
 [data-testid="stMetric"] {
     background: rgba(15, 45, 30, 0.7);
     border-radius: 16px;
@@ -550,33 +514,27 @@ h1, h2, h3 {
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
     transition: transform 0.2s ease;
 }
-
 [data-testid="stMetric"]:hover {
     transform: translateY(-2px);
     border-color: #4ade80;
 }
-
 [data-testid="stMetric"] label {
     color: #a3e635 !important;
     font-weight: 600;
 }
-
 [data-testid="stMetric"] div[data-testid="stMetricValue"] {
     color: #ffffff !important;
 }
-
 .intro {
     text-align: center;
     padding: 16px;
     color: #ffffff;
 }
-
 .intro h1 {
     font-size: 28px;
     font-weight: 800;
     color: #4ade80;
 }
-
 .intro p {
     font-size: 13px;
     color: #a3e635;
@@ -595,23 +553,18 @@ st.markdown("""
 # 🎛 CONTROL HUB
 with st.sidebar:
     st.markdown("## 📱 AILY MOBILE CONTROL")
-    
     budget_input = st.number_input("Set Project Budget", min_value=0.0, key="budget_input_sidebar", value=st.session_state.budget)
     if st.button("APPLY BUDGET", use_container_width=True):
         st.session_state.budget = float(budget_input)
         st.success("Budget applied!")
         st.rerun()
-        
     st.caption(f"{datetime.now().strftime('%I:%M %p | %b %d')}")
     st.divider()
-
     st.subheader("🏠 Navigation")
     if st.button("🏠 Project Summary / Home", use_container_width=True):
         set_view("home")
-        
     low_stock = sum(1 for n in material_names() if get_material_stock(n) <= 5)
     st.caption(f"📦 Material Types: {len(material_names())} | ⚠️ Low Stock Items: {low_stock}")
-
     st.markdown("---")
     st.subheader("🧱 Construction Ledger")
     if st.button("➕ Add Material", use_container_width=True):
@@ -632,7 +585,6 @@ with st.sidebar:
         set_view("tools_ledger")
     if st.button("📤 Export Construction Report", use_container_width=True):
         set_view("export")
-        
     st.markdown("---")
     st.subheader("👷 Payroll System")
     if st.button("➕ Add Labor", use_container_width=True):
@@ -645,9 +597,7 @@ with st.sidebar:
         set_view("payroll_ledger")
     if st.button("📤 Export Payroll Report", use_container_width=True):
         set_view("payroll_export")
-    
     st.divider()
-    
     if st.button("🔄 RESET SYSTEM", use_container_width=True):
         clear_all()
         set_view("home")
@@ -658,15 +608,11 @@ view = st.session_state.view
 # 🏠 HOME
 if view == "home":
     st.subheader("📊 QUICK STATS")
-    
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3 = st.columns(3)
     col1.metric("BUDGET", f"PHP {st.session_state.budget:,.2f}")
-    col2.metric("USED", f"PHP {get_total():,.2f}")ASC d qw  m,.abcewvkjb,mewffm,asbfm . madcSVWE32 `EE  D.C'ASVEF1X3
-    \`
-    col4.metric("BALANCE", f"PHP {get_balance():,.2f}")
-    
+    col2.metric("USED", f"PHP {get_total():,.2f}")
+    col3.metric("BALANCE", f"PHP {get_balance():,.2f}")
     st.markdown("---")
-    
     st.subheader("📋 MATERIALS LEDGER PREVIEW")
     if not st.session_state.records:
         st.info("No materials yet.")
@@ -683,16 +629,13 @@ if view == "home":
 # ➕ MATERIAL
 elif view == "material":
     st.subheader("➕ MATERIAL (LOOP MODE)")
-
     with st.form(key="material_form", clear_on_submit=True):
         name = st.text_input("Material Name")
         price = st.number_input("Price", min_value=0.01, value=0.01)
         qty = st.number_input("Qty", min_value=1, value=1)
         delivery = st.number_input("Delivery", min_value=0.0, value=0.0)
         sender = st.selectbox("Sender", ["Garr", "Aily"])
-        
         submitted = st.form_submit_button(label="SAVE MATERIAL")
-
     if submitted:
         ok = add_tx(name, price, qty, delivery, "material", sender)
         if ok:
@@ -700,7 +643,6 @@ elif view == "material":
             st.rerun()
         else:
             st.warning("Invalid data, please check amounts.")
-
     st.divider()
     if st.button("🏁 FINISH LOOP", use_container_width=True):
         set_view("home")
@@ -708,14 +650,11 @@ elif view == "material":
 # 📝 EXPENSE
 elif view == "expense":
     st.subheader("📝 EXPENSE (LOOP MODE)")
-
     with st.form(key="expense_form", clear_on_submit=True):
         name = st.text_input("Expense Name")
         amount = st.number_input("Amount", min_value=0.01, value=0.01)
         sender = st.selectbox("Sender", ["Garr", "Aily"])
-        
         submitted = st.form_submit_button(label="SAVE EXPENSE")
-
     if submitted:
         if amount > 0:
             add_tx(name, amount, 1, 0, "expense", sender)
@@ -723,7 +662,6 @@ elif view == "expense":
             st.rerun()
         else:
             st.warning("Amount must be greater than zero.")
-
     st.divider()
     if st.button("🏁 FINISH LOOP", use_container_width=True):
         set_view("home")
@@ -731,14 +669,11 @@ elif view == "expense":
 # 💰 EXCESS
 elif view == "excess":
     st.subheader("💰 EXCESS (LOOP MODE)")
-
     with st.form(key="excess_form", clear_on_submit=True):
         name = st.text_input("Reason")
         amount = st.number_input("Amount", min_value=0.01, value=0.01)
         sender = st.selectbox("Sender", ["Garr", "Aily"])
-        
         submitted = st.form_submit_button(label="ADD EXCESS")
-
     if submitted:
         if amount > 0:
             st.session_state.records.append({
@@ -756,7 +691,6 @@ elif view == "excess":
             st.rerun()
         else:
             st.warning("Please enter a valid amount.")
-
     st.divider()
     if st.button("🏁 FINISH LOOP", use_container_width=True):
         set_view("home")
@@ -764,86 +698,58 @@ elif view == "excess":
 # 🛠️ TOOL
 elif view == "tool":
     st.subheader("🛠️ ADD TOOL (LOOP MODE)")
-
     with st.form(key="tool_form", clear_on_submit=True):
         name = st.text_input("Tool Name")
         qty = st.number_input("Quantity", min_value=1, value=1)
         sender = st.selectbox("Sender", ["Garr", "Aily"], key="tool_sender")
         submitted = st.form_submit_button("SAVE TOOL")
-
-   # 1. Define inputs (Price is removed)
-name = st.text_input("Tool Name")
-qty = st.number_input("Quantity", min_value=1, step=1)
-sender = st.text_input("Sender")
-
-if submitted:
-    # 2. Check name, qty, and amount instead of price
-    if name.strip() and qty > 0 and amount > 0:
-        st.session_state.tools_records.append({
-            "id": str(time.time()),
-            "date": datetime.now().strftime("%b %d, %Y"),
-            "name": name.upper(),
-            "qty": int(qty),
-            "sender": sender,
-            "type": "tool",
-            "available": True,
-            "returned": False,
-            "downloaded": False
-        })
-        st.success("Tool saved successfully.")
-        st.rerun()
-    else:
-        st.warning("Please enter valid tool data.")
-
-if st.button("🏁 FINISH LOOP", use_container_width=True):
-    set_view("home")
-
+    if submitted:
+        if name.strip() and qty > 0:
+            st.session_state.tools_records.append({
+                "id": str(time.time()),
+                "date": datetime.now().strftime("%b %d, %Y"),
+                "name": name.upper(),
+                "qty": int(qty),
+                "sender": sender,
+                "type": "tool",
+                "available": True,
+                "returned": False,
+                "downloaded": False
+            })
+            st.success("Tool saved successfully.")
+            st.rerun()
+        else:
+            st.warning("Please enter valid tool data.")
+    if st.button("🏁 FINISH LOOP", use_container_width=True):
+        set_view("home")
 
 # 🧰 TOOLS LEDGER
 elif view == "tools_ledger":
     st.subheader("🧰 TOOLS CHECKLIST LEDGER")
-
     if not st.session_state.tools_records:
         st.info("No tools recorded.")
     else:
         for i, r in enumerate(st.session_state.tools_records):
-
             st.markdown(f"""
             ---
             ### 🔧 {r['name']}
             👤 {r['sender']}  
             📅 {r['date']}
             """)
-
             col1, col2, col3 = st.columns(3)
-
             with col1:
-                available = st.checkbox(
-                    "✔ AVAILABLE",
-                    value=r.get("available", True),
-                    key=f"available_{i}"
-                )
+                available = st.checkbox("✔ AVAILABLE", value=r.get("available", True), key=f"available_{i}")
                 st.session_state.tools_records[i]["available"] = available
-
             with col2:
-                returned = st.checkbox(
-                    "↩ RETURNED",
-                    value=r.get("returned", False),
-                    key=f"returned_{i}"
-                )
+                returned = st.checkbox("↩ RETURNED", value=r.get("returned", False), key=f"returned_{i}")
                 st.session_state.tools_records[i]["returned"] = returned
-
             with col3:
-                downloaded = st.checkbox(
-                    "⬇ DOWNLOADED",
-                    value=r.get("downloaded", False),
-                    key=f"downloaded_{i}"
-                )
+                downloaded = st.checkbox("⬇ DOWNLOADED", value=r.get("downloaded", False), key=f"downloaded_{i}")
                 st.session_state.tools_records[i]["downloaded"] = downloaded
+
 # 📦 MATERIAL INVENTORY
 elif view == "material_inventory":
     st.subheader("📦 MATERIAL INVENTORY")
-
     with st.form("material_inventory_form", clear_on_submit=True):
         name = st.text_input("Material Name")
         unit = st.text_input("Unit (bags, pcs, kg, meters)", value="pcs")
@@ -852,7 +758,6 @@ elif view == "material_inventory":
         minimum = st.number_input("Minimum Stock Alert", min_value=0.0, value=5.0)
         notes = st.text_input("Notes")
         submitted = st.form_submit_button("SAVE INVENTORY MOVEMENT")
-
     if submitted:
         if name.strip() and (stock_in > 0 or stock_out > 0):
             st.session_state.material_inventory.append({
@@ -873,7 +778,6 @@ elif view == "material_inventory":
 # 📊 MATERIAL STOCK MONITOR
 elif view == "material_stock":
     st.subheader("📊 MATERIAL STOCK MONITOR")
-
     names = material_names()
     if not names:
         st.info("No material inventory records yet.")
@@ -884,35 +788,21 @@ elif view == "material_stock":
             unit = rows[-1]["unit"]
             minimum = rows[-1]["minimum"]
             status = "⚠️ LOW STOCK" if current <= minimum else "✅ OK"
-
             st.markdown(f"""
             ---
             **{name}** 📦 Current Stock: **{current:,.2f} {unit}** 🔔 Minimum Level: {minimum:,.2f} {unit}  
             {status}
             """)
-
             with st.expander("View Movements"):
                 for r in reversed(rows[-10:]):
                     st.write(f"{r['date']} | +{r['stock_in']} / -{r['stock_out']} {unit} | {r['notes']}")
-
         st.markdown("---")
-
-    inventory_html = generate_inventory_html(
-        st.session_state.material_inventory
-    )
-
-    st.download_button(
-        label="⬇ DOWNLOAD MATERIAL INVENTORY HTML",
-        data=inventory_html,
-        file_name="material_inventory_history.html",
-        mime="text/html",
-        use_container_width=True
-    )
+    inventory_html = generate_inventory_html(st.session_state.material_inventory)
+    st.download_button(label="⬇ DOWNLOAD MATERIAL INVENTORY HTML", data=inventory_html, file_name="material_inventory_history.html", mime="text/html", use_container_width=True)
 
 # 📋 LEDGER
 elif view == "ledger":
     st.subheader("📋 CONSTRUCTION LEDGER (MOBILE VIEW)")
-
     if not st.session_state.records:
         st.info("No transaction records found in ledger.")
     else:
@@ -924,27 +814,15 @@ elif view == "ledger":
             📦 {r['type']}  
             📅 {r['date']}
             """)
-
             if st.button("❌ DELETE", key=f"del_{r['id']}", use_container_width=True):
-                st.session_state.records = [
-                    x for x in st.session_state.records if x["id"] != r["id"]
-                ]
+                st.session_state.records = [x for x in st.session_state.records if x["id"] != r["id"]]
                 st.rerun()
 
 # 📤 EXPORT
 elif view == "export":
     st.subheader("📤 EXPORT CONSTRUCTION REPORT")
-
     html = build_html_report(st.session_state.records, st.session_state.budget)
-
-    st.download_button(
-        label="DOWNLOAD CONSTRUCTION REPORT",
-        data=html,
-        file_name="aily_mobile_report.html",
-        mime="text/html",
-        use_container_width=True
-    )
-
+    st.download_button(label="DOWNLOAD CONSTRUCTION REPORT", data=html, file_name="aily_mobile_report.html", mime="text/html", use_container_width=True)
     st.markdown("📧 **Receivers Enabled:**")
     st.write("Garry ✔")
     st.write("Aily ✔")
@@ -959,9 +837,7 @@ elif view == "add_labor":
         rate_option = st.radio("Rates", ["800", "650", "500"])
         rate = 800 if rate_option == "800" else 650 if rate_option == "650" else 500
         ca = st.number_input("Cash Advance", min_value=0.0, value=0.0)
-        
         submitted = st.form_submit_button("SAVE LABOR")
-        
     if submitted:
         net = (days * rate) - ca
         st.session_state.labor_records.append({
@@ -979,9 +855,7 @@ elif view == "add_payroll_expense":
     with st.form(key="payroll_expense_form", clear_on_submit=True):
         desc = st.text_input("Expense Description")
         amt = st.number_input("Amount", min_value=0.01, value=0.01)
-        
         submitted = st.form_submit_button("SAVE EXPENSE")
-        
     if submitted:
         st.session_state.payroll_expenses.append({
             "item": desc.upper(),
@@ -1013,7 +887,6 @@ elif view == "payroll_ledger":
         if st.button("Delete Labor", key=f"del_lab_{i}"):
             st.session_state.labor_records.pop(i)
             st.rerun()
-            
     st.markdown("---")
     st.markdown("### Payroll Expenses")
     if not st.session_state.payroll_expenses:
@@ -1028,21 +901,8 @@ elif view == "payroll_ledger":
 
 elif view == "payroll_export":
     st.subheader("📤 GENERATE PAYROLL REPORT")
-    
-    html, total = generate_payroll_html(
-        st.session_state.labor_records, 
-        st.session_state.payroll_expenses, 
-        st.session_state.remaining_money
-    )
-    
-    st.download_button(
-        label="DOWNLOAD PAYROLL REPORT",
-        data=html,
-        file_name="payroll_report.html",
-        mime="text/html",
-        use_container_width=True
-    )
-    
+    html, total = generate_payroll_html(st.session_state.labor_records, st.session_state.payroll_expenses, st.session_state.remaining_money)
+    st.download_button(label="DOWNLOAD PAYROLL REPORT", data=html, file_name="payroll_report.html", mime="text/html", use_container_width=True)
     if st.button("📧 Email Report"):
         try:
             msg = EmailMessage()
@@ -1056,6 +916,5 @@ elif view == "payroll_export":
             st.success("🚀 SUCCESS! Emailed report.")
         except Exception as e:
             st.error(f"❌ EMAIL FAILED: {e}")
-            
 else:
     st.info("Welcome to AILY OS. Use the sidebar to navigate.")
