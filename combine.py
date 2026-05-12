@@ -509,7 +509,6 @@ h1, h2, h3 {
 
 st.markdown("""
 <div class="intro">
-            </div>
       <h1>🏗️ AILYN HOUSE PROJECT & PAYROLL</h1>
     <p style="font-size: 18px; color: #a3e635;">Combined System | Mobile Operating Engine v30000</p>
 </div>
