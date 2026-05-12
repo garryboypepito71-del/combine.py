@@ -94,7 +94,7 @@ def add_tx(name, price, qty, delivery, ttype, sender):
 
 
 def total_tools():
-    return sum(r["amount"] for r in st.session_state.tools_records)
+    return sum(r[""] for r in st.session_state.tools_records)
 
 
 def get_material_stock(item_name):
@@ -770,33 +770,37 @@ elif view == "tool":
 
     with st.form(key="tool_form", clear_on_submit=True):
         name = st.text_input("Tool Name")
-        price = st.number_input("Tool Price", min_value=0.01, value=0.01)
+     
         qty = st.number_input("Quantity", min_value=1, value=1)
         sender = st.selectbox("Sender", ["Garr", "Aily"], key="tool_sender")
         submitted = st.form_submit_button("SAVE TOOL")
 
-    if submitted:
-        if name.strip() and price > 0 and qty > 0:
-            st.session_state.tools_records.append({
-                "id": str(time.time()),
-                "date": datetime.now().strftime("%b %d, %Y"),
-                "name": name.upper(),
-                "price": float(price),
-                "qty": int(qty),
-                "amount": float(price) * int(qty),
-                "sender": sender,
-                "type": "tool",
-                "available": True,
-                "returned": False,
-                "downloaded": False
-            })
-            st.success("Tool saved successfully.")
-            st.rerun()
-        else:
-            st.warning("Please enter valid tool data.")
+   # 1. Define inputs (Price is removed)
+name = st.text_input("Tool Name")
+qty = st.number_input("Quantity", min_value=1, step=1)
+sender = st.text_input("Sender")
 
-    if st.button("🏁 FINISH LOOP", use_container_width=True):
-        set_view("home")
+if submitted:
+    # 2. Check name, qty, and amount instead of price
+    if name.strip() and qty > 0 and amount > 0:
+        st.session_state.tools_records.append({
+            "id": str(time.time()),
+            "date": datetime.now().strftime("%b %d, %Y"),
+            "name": name.upper(),
+            "qty": int(qty),
+            "sender": sender,
+            "type": "tool",
+            "available": True,
+            "returned": False,
+            "downloaded": False
+        })
+        st.success("Tool saved successfully.")
+        st.rerun()
+    else:
+        st.warning("Please enter valid tool data.")
+
+if st.button("🏁 FINISH LOOP", use_container_width=True):
+    set_view("home")
 
 
 # 🧰 TOOLS LEDGER
