@@ -30,7 +30,7 @@ if "payroll_expenses" not in st.session_state:
     st.session_state.payroll_expenses = []  # Payroll expense records
 
 if "tools_records" not in st.session_state:
-    st.session_state.tools_records = []  # Tools inventory records
+    st.session_state.tools_records = []  # Tools inventory records with checklist
 
 if "material_inventory" not in st.session_state:
     st.session_state.material_inventory = []  # Stock monitoring records
@@ -260,6 +260,77 @@ def build_html_report(records, budget):
     """
     return html
 
+
+
+# ═════════════════ INVENTORY HISTORY EXPORT ═════════════════
+def generate_inventory_html(material_inventory):
+
+    html = """
+    <html>
+    <head>
+    <style>
+    body{
+        font-family:Arial;
+        background:#f4f4f4;
+        padding:30px;
+    }
+    .container{
+        background:white;
+        padding:20px;
+        border-radius:10px;
+        border-top:10px solid #1b5e20;
+    }
+    table{
+        width:100%;
+        border-collapse:collapse;
+    }
+    th{
+        background:#1b5e20;
+        color:white;
+        padding:10px;
+    }
+    td{
+        border-bottom:1px solid #ddd;
+        padding:10px;
+    }
+    </style>
+    </head>
+    <body>
+    <div class="container">
+    <h1>📦 MATERIAL INVENTORY HISTORY</h1>
+
+    <table>
+    <tr>
+        <th>DATE</th>
+        <th>MATERIAL</th>
+        <th>OLD STOCK</th>
+        <th>LATEST STOCK</th>
+        <th>TOTAL</th>
+    </tr>
+    """
+
+    for r in material_inventory:
+        total = r["stock_in"] - r["stock_out"]
+
+        html += f"""
+        <tr>
+            <td>{r['date']}</td>
+            <td>{r['name']}</td>
+            <td>{r['stock_out']}</td>
+            <td>{r['stock_in']}</td>
+            <td>{total}</td>
+        </tr>
+        """
+
+    html += """
+    </table>
+    </div>
+    </body>
+    </html>
+    """
+
+    return html
+
 # ═════════════════ REPORT MANAGER (PAYROLL) ═════════════════
 def generate_payroll_html(labor_records, expense_records, remaining_money=0.0):
     date_str = datetime.now().strftime("%B %d, %Y | %I:%M %p")
@@ -377,66 +448,6 @@ def generate_payroll_html(labor_records, expense_records, remaining_money=0.0):
     """
     return html, grand_total
 
-
-def generate_tools_html(tools_records):
-    date_str = datetime.now().strftime("%B %d, %Y")
-    html = f'''
-    <html>
-    <body style="font-family: Arial; padding: 20px;">
-        <h2 style="color: #1b5e20;">🛠️ TOOL INVENTORY REPORT</h2>
-        <p>Date: {date_str}</p>
-        <table border="1" style="width: 100%; border-collapse: collapse;">
-            <tr style="background: #1b5e20; color: white;">
-                <th>Tool Name</th><th>Qty</th><th>Price</th><th>Total</th><th>Status</th><th>Sender</th>
-            </tr>
-    '''
-    for r in tools_records:
-        status = "✅ AVAILABLE" if r.get('available', True) else "❌ OUT"
-        html += f"<tr><td>{r['name']}</td><td>{r['qty']}</td><td>{r['price']:,.2f}</td><td>{r['amount']:,.2f}</td><td>{status}</td><td>{r['sender']}</td></tr>"
-    
-    html += "</table></body></html>"
-    return html
-
-def generate_inventory_html(inventory):
-    date_str = datetime.now().strftime("%B %d, %Y")
-    html = f'''
-    <html>
-    <body style="font-family: Arial; padding: 20px;">
-        <h2 style="color: #1b5e20;">📦 MATERIAL STOCK REPORT</h2>
-        <p>Date: {date_str}</p>
-        <table border="1" style="width: 100%; border-collapse: collapse;">
-            <tr style="background: #1b5e20; color: white;">
-                <th>Material</th><th>Unit</th><th>Stock In</th><th>Stock Out</th><th>Date</th>
-            </tr>
-    '''
-    for r in inventory:
-        html += f"<tr><td>{r['name']}</td><td>{r['unit']}</td><td>{r['stock_in']}</td><td>{r['stock_out']}</td><td>{r['date']}</td></tr>"
-    
-    html += "</table></body></html>"
-    return html
-
-def generate_inventory_receipt_html(inventory):
-    date_str = datetime.now().strftime("%B %d, %Y")
-    # Usually a receipt is for the latest transaction
-    latest = inventory[-1] if inventory else {}
-    html = f'''
-    <html>
-    <body style="font-family: 'Courier New'; padding: 40px; border: 2px solid #333; max-width: 500px; margin: auto;">
-        <div style="text-align: center;">
-            <h2>INVENTORY MATERIALS RECEIPT</h2>
-            <p>AILYN CONSTRUCTION</p>
-            <hr>
-        </div>
-        <p><b>Date:</b> {date_str}</p>
-        <p><b>Material:</b> {latest.get('name', 'N/A')}</p>
-        <p><b>Movement:</b> +{latest.get('stock_in', 0)} / -{latest.get('stock_out', 0)} {latest.get('unit', '')}</p>
-        <p><b>Notes:</b> {latest.get('notes', 'None')}</p>
-        <hr>
-        <p style="text-align: center; font-size: 10px;">Thank you for your update!</p>
-    </body>
-    </html>
-    '''
-    return html
 # ═════════════════ CSS & 3D GREEN INTERFACE ═════════════════
 st.markdown("""
 <style>
@@ -762,7 +773,6 @@ elif view == "tool":
         price = st.number_input("Tool Price", min_value=0.01, value=0.01)
         qty = st.number_input("Quantity", min_value=1, value=1)
         sender = st.selectbox("Sender", ["Garr", "Aily"], key="tool_sender")
-        available = st.toggle("Is Tool Available? (Check/X)", value=True)
         submitted = st.form_submit_button("SAVE TOOL")
 
     if submitted:
@@ -776,7 +786,9 @@ elif view == "tool":
                 "amount": float(price) * int(qty),
                 "sender": sender,
                 "type": "tool",
-                "available": available
+                "available": True,
+                "returned": False,
+                "downloaded": False
             })
             st.success("Tool saved successfully.")
             st.rerun()
@@ -786,38 +798,48 @@ elif view == "tool":
     if st.button("🏁 FINISH LOOP", use_container_width=True):
         set_view("home")
 
+
 # 🧰 TOOLS LEDGER
 elif view == "tools_ledger":
-    st.subheader("🧰 TOOLS INVENTORY")
+    st.subheader("🧰 TOOLS CHECKLIST LEDGER")
 
     if not st.session_state.tools_records:
         st.info("No tools recorded.")
     else:
-        # Download Section
-        t_html = generate_tools_html(st.session_state.tools_records)
-        st.download_button("📥 DOWNLOAD TOOLS LEDGER", data=t_html, file_name="tools_report.html", mime="text/html", use_container_width=True)
-        
-        for i, r in enumerate(list(st.session_state.tools_records)):
-            status_icon = "✅ AVAILABLE" if r.get('available', True) else "❌ OUT/UNAVAILABLE"
+        for i, r in enumerate(st.session_state.tools_records):
+
             st.markdown(f"""
             ---
-            ### {r['name']} {status_icon}
-            🔧 Qty: {r['qty']} | 💰 PHP {r['amount']:,.2f}  
-            👤 {r['sender']} | 📅 {r['date']}
+            ### 🔧 {r['name']}
+            👤 {r['sender']}  
+            📅 {r['date']}
             """)
-            
-            col_a, col_b = st.columns(2)
-            if col_a.button(f"🔄 TOGGLE STATUS", key=f"tog_{r['id']}"):
-                st.session_state.tools_records[i]['available'] = not r.get('available', True)
-                st.rerun()
-                
-            if col_b.button("❌ DELETE", key=f"del_tool_{r['id']}"):
-                st.session_state.tools_records = [
-                    x for x in st.session_state.tools_records if x["id"] != r["id"]
-                ]
-                st.rerun()
 
+            col1, col2, col3 = st.columns(3)
 
+            with col1:
+                available = st.checkbox(
+                    "✔ AVAILABLE",
+                    value=r.get("available", True),
+                    key=f"available_{i}"
+                )
+                st.session_state.tools_records[i]["available"] = available
+
+            with col2:
+                returned = st.checkbox(
+                    "↩ RETURNED",
+                    value=r.get("returned", False),
+                    key=f"returned_{i}"
+                )
+                st.session_state.tools_records[i]["returned"] = returned
+
+            with col3:
+                downloaded = st.checkbox(
+                    "⬇ DOWNLOADED",
+                    value=r.get("downloaded", False),
+                    key=f"downloaded_{i}"
+                )
+                st.session_state.tools_records[i]["downloaded"] = downloaded
 # 📦 MATERIAL INVENTORY
 elif view == "material_inventory":
     st.subheader("📦 MATERIAL INVENTORY")
@@ -856,28 +878,6 @@ elif view == "material_stock":
     if not names:
         st.info("No material inventory records yet.")
     else:
-        # CHART SECTION
-        st.subheader("📈 STOCK COMPARISON (OLD vs LATEST)")
-        chart_data = []
-        for name in names:
-            movements = [r for r in st.session_state.material_inventory if r["name"] == name]
-            latest_val = movements[-1]["stock_in"] if movements else 0
-            old_val = sum(m["stock_in"] for m in movements[:-1]) if len(movements) > 1 else 0
-            chart_data.append({"Material": name, "Old Stock In": old_val, "Latest Stock In": latest_val})
-        
-        if chart_data:
-            import pandas as pd
-            df = pd.DataFrame(chart_data).set_index("Material")
-            st.bar_chart(df)
-
-        # DOWNLOAD SECTION
-        c1, c2 = st.columns(2)
-        inv_html = generate_inventory_html(st.session_state.material_inventory)
-        c1.download_button("📥 DOWNLOAD FULL INVENTORY", data=inv_html, file_name="material_inventory.html", mime="text/html", use_container_width=True)
-        
-        rec_html = generate_inventory_receipt_html(st.session_state.material_inventory)
-        c2.download_button("🧾 DOWNLOAD LATEST RECEIPT", data=rec_html, file_name="inventory_receipt.html", mime="text/html", use_container_width=True)
-
         for name in names:
             rows = [r for r in st.session_state.material_inventory if r["name"] == name]
             current = get_material_stock(name)
@@ -887,15 +887,27 @@ elif view == "material_stock":
 
             st.markdown(f"""
             ---
-            **{name}**  
-            📦 Current Stock: **{current:,.2f} {unit}**  
-            🔔 Minimum Level: {minimum:,.2f} {unit}  
+            **{name}** 📦 Current Stock: **{current:,.2f} {unit}** 🔔 Minimum Level: {minimum:,.2f} {unit}  
             {status}
             """)
 
             with st.expander("View Movements"):
                 for r in reversed(rows[-10:]):
                     st.write(f"{r['date']} | +{r['stock_in']} / -{r['stock_out']} {unit} | {r['notes']}")
+
+        st.markdown("---")
+
+    inventory_html = generate_inventory_html(
+        st.session_state.material_inventory
+    )
+
+    st.download_button(
+        label="⬇ DOWNLOAD MATERIAL INVENTORY HTML",
+        data=inventory_html,
+        file_name="material_inventory_history.html",
+        mime="text/html",
+        use_container_width=True
+    )
 
 # 📋 LEDGER
 elif view == "ledger":
