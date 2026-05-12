@@ -55,9 +55,6 @@ def total_materials():
 def total_expenses():
     return sum(r["amount"] for r in st.session_state.records if r["type"] == "expense")
 
-def total_excess():
-    return sum(r["amount"] for r in st.session_state.records if r["type"] == "excess")
-
 def get_total():
     return total_materials() + total_expenses()
 
@@ -664,8 +661,8 @@ if view == "home":
     
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("BUDGET", f"PHP {st.session_state.budget:,.2f}")
-    col2.metric("USED", f"PHP {get_total():,.2f}")
-    col3.metric("TOOLS", f"PHP {total_tools():,.2f}")
+    col2.metric("USED", f"PHP {get_total():,.2f}")ASC d qw  m,.abcewvkjb,mewffm,asbfm . madcSVWE32 `EE  D.C'ASVEF1X3
+    \`
     col4.metric("BALANCE", f"PHP {get_balance():,.2f}")
     
     st.markdown("---")
@@ -770,7 +767,6 @@ elif view == "tool":
 
     with st.form(key="tool_form", clear_on_submit=True):
         name = st.text_input("Tool Name")
-     
         qty = st.number_input("Quantity", min_value=1, value=1)
         sender = st.selectbox("Sender", ["Garr", "Aily"], key="tool_sender")
         submitted = st.form_submit_button("SAVE TOOL")
