@@ -381,11 +381,11 @@ st.markdown("""
     button {
         width: 100% !important;
         margin-bottom: 8px !important;
-        font-size: 16px !important;
+        font-size: 26px !important;
         padding: 12px !important;
     }
     input {
-        font-size: 16px !important;
+        font-size: 26px !important;
     }
     .stColumns {
         flex-direction: column !important;
@@ -489,18 +489,18 @@ h1, h2, h3 {
 
 .intro {
     text-align: center;
-    padding: 16px;
-    color: #ffffff;
+    padding: 60px;
+    color: #E0F2F1;
 }
 
 .intro h1 {
-    font-size: 28px;
-    font-weight: 800;
+    font-size: 120px;
+    font-weight: 100000;
     color: #4ade80;
 }
 
 .intro p {
-    font-size: 13px;
+    font-size: 89px;
     color: #a3e635;
     opacity: 0.9;
 }
@@ -521,7 +521,7 @@ with st.sidebar:
     st.markdown(
     """
     <h1 style="
-        font-size:48px;
+        font-size:80px;
         font-family:'inter', Impact, sans-serif;
         font-weight:500;
         letter-spacing:2px;
@@ -542,7 +542,7 @@ with st.sidebar:
     st.markdown(
     """
     <h1 style="
-        font-size:48px;
+        font-size:80px;
         font-family:'inter', Impact, sans-serif;
         font-weight:500;
         letter-spacing:2px;
@@ -570,7 +570,7 @@ with st.sidebar:
     st.markdown(
     """
     <h1 style="
-        font-size:48px;
+        font-size:80px;
         font-family:'inter', Impact, sans-serif;
         font-weight:500;
         letter-spacing:2px;
@@ -596,7 +596,7 @@ with st.sidebar:
     st.markdown(
     """
     <h1 style="
-        font-size:500px;
+        font-size:80px;
         font-family:'inter', Impact, sans-serif;
         font-weight:500;
         letter-spacing:2px;
@@ -626,7 +626,7 @@ with st.sidebar:
     st.markdown(
     """
     <h1 style="
-        font-size:48px;
+        font-size:80px;
         font-family:'inter', Impact, sans-serif;
         font-weight:500;
         letter-spacing:2px;
