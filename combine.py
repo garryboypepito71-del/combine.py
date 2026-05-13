@@ -918,3 +918,11 @@ elif view == "payroll_export":
             st.error(f"❌ EMAIL FAILED: {e}")
 else:
     st.info("Welcome to AILY OS. Use the sidebar to navigate.")
+    def save_captured_photo(photo_file, prefix="item"):
+    if photo_file:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"captures/{prefix}_{timestamp}.png"
+        with open(filename, "wb") as f:
+            f.write(photo_file.getbuffer())
+        return filename
+    return None
