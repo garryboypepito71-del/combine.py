@@ -919,10 +919,7 @@ elif view == "payroll_export":
 else:
     st.info("Welcome to AILY OS. Use the sidebar to navigate.")
     def save_captured_photo(photo_file, prefix="item"):
-    if photo_file:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"captures/{prefix}_{timestamp}.png"
+       if photo_file is not None:
         with open(filename, "wb") as f:
             f.write(photo_file.getbuffer())
         return filename
-    return None
