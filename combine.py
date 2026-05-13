@@ -490,13 +490,13 @@ h1, h2, h3 {
 .intro {
     text-align: center;
     padding: 60px;
-    color: #E0F2F1;
+    color: #2E0854;
 }
 
 .intro h1 {
-    font-size: 120px;
-    font-weight: 100000;
-    color: #4ade80;
+    font-size: 60px;
+    font-weight: 1000;
+    color: #2E0854;
 }
 
 .intro p {
@@ -521,9 +521,9 @@ with st.sidebar:
     st.markdown(
     """
     <h1 style="
-        font-size:80px;
+        font-size:50px;
         font-family:'inter', Impact, sans-serif;
-        font-weight:500;
+        font-weight:50;
         letter-spacing:2px;
         text-transform:uppercase;
         color:#4ade80;
@@ -542,9 +542,9 @@ with st.sidebar:
     st.markdown(
     """
     <h1 style="
-        font-size:80px;
+        font-size:50px;
         font-family:'inter', Impact, sans-serif;
-        font-weight:500;
+        font-weight:50;
         letter-spacing:2px;
         text-transform:uppercase;
         color:#4ade80;
@@ -570,9 +570,9 @@ with st.sidebar:
     st.markdown(
     """
     <h1 style="
-        font-size:80px;
+        font-size:50px;
         font-family:'inter', Impact, sans-serif;
-        font-weight:500;
+        font-weight:50;
         letter-spacing:2px;
         text-transform:uppercase;
         color:#4ade80;
@@ -596,9 +596,9 @@ with st.sidebar:
     st.markdown(
     """
     <h1 style="
-        font-size:80px;
+        font-size:50px;
         font-family:'inter', Impact, sans-serif;
-        font-weight:500;
+        font-weight:50;
         letter-spacing:2px;
         text-transform:uppercase;
         color:#4ade80;
@@ -626,9 +626,9 @@ with st.sidebar:
     st.markdown(
     """
     <h1 style="
-        font-size:80px;
+        font-size:50px;
         font-family:'inter', Impact, sans-serif;
-        font-weight:500;
+        font-weight:50;
         letter-spacing:2px;
         text-transform:uppercase;
         color:#4ade80;
