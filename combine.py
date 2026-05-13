@@ -517,39 +517,101 @@ st.markdown("""
 # 🎛 CONTROL HUB
 with st.sidebar:
     st.markdown("## 📱 MAIN CONTROL")
-    
-
-   # This will show: May 13, 2026 (Month Day, Year)
-    st.caption(f"📅 {datetime.now().strftime('%B %d, %Y')}")
+    st.markdown("---")
+    st.markdown(
+    """
+    <h1 style="
+        font-size:48px;
+        font-family:'inter', Impact, sans-serif;
+        font-weight:500;
+        letter-spacing:2px;
+        text-transform:uppercase;
+        color:#4ade80;
+        text-shadow:0 0 12px rgba(34,197,94,0.6);
+        margin-bottom:10px;
+    ">
+       🏠 Navigation
+    </h1>
+    """,
+    unsafe_allow_html=True
+)
     st.divider()
-
-    st.subheader("🏠 Navigation")
     if st.button("🏠 Project Summary / Home", use_container_width=True):
         set_view("home")
-        
     st.markdown("---")
-    st.subheader("🧱 Construction Ledger")
-    if st.button("➕ Add Material", use_container_width=True):
-        set_view("material")
-    if st.button("📝 Add Construction Expense", use_container_width=True):
-        set_view("expense")
+    st.markdown(
+    """
+    <h1 style="
+        font-size:48px;
+        font-family:'inter', Impact, sans-serif;
+        font-weight:500;
+        letter-spacing:2px;
+        text-transform:uppercase;
+        color:#4ade80;
+        text-shadow:0 0 12px rgba(34,197,94,0.6);
+        margin-bottom:10px;
+    ">
+       💰 BUDGET SUMMARY 💸
+    </h1>
+    """,
+    unsafe_allow_html=True
+)
+    st.divider()
+    budget_input = st.number_input("Set Project Budget", min_value=0.0, key="budget_input_sidebar", value=st.session_state.budget)
+    if st.button("APPLY BUDGET", use_container_width=True):
+        st.session_state.budget = float(budget_input)
+        st.success("Budget applied!")
+        st.rerun()
     if st.button("💰 Add Excess Money", use_container_width=True):
         set_view("excess")
+   # This will show: May 13, 2026 (Month Day, Year)
+    st.caption(f"📅 {datetime.now().strftime('%B %d, %Y')}")    
+    st.markdown("---")
+    st.markdown(
+    """
+    <h1 style="
+        font-size:48px;
+        font-family:'inter', Impact, sans-serif;
+        font-weight:500;
+        letter-spacing:2px;
+        text-transform:uppercase;
+        color:#4ade80;
+        text-shadow:0 0 12px rgba(34,197,94,0.6);
+        margin-bottom:10px;
+    ">
+        🧱 Construction Ledger
+    </h1>
+    """,
+    unsafe_allow_html=True
+)
+    st.divider()
+    if st.button("➕ Add Material", use_container_width=True):
+        set_view("material")
     if st.button("📋 View Project Ledger", use_container_width=True):
         set_view("ledger")
-    if st.button("🛠️ Add Tool", use_container_width=True):
-        set_view("tool")
-    if st.button("🧰 View Tools Inventory", use_container_width=True):
-        set_view("tools_ledger")
-    if st.button("📦 Add Stock Monitoring", use_container_width=True):
-        set_view("add_stock")
-    if st.button("📊 View Stock Inventory", use_container_width=True):
-        set_view("stock_ledger")
     if st.button("📤 Export Construction Report", use_container_width=True):
         set_view("export")
-        
+
     st.markdown("---")
-    st.subheader("👷 Payroll System")
+    st.markdown(
+    """
+    <h1 style="
+        font-size:500px;
+        font-family:'inter', Impact, sans-serif;
+        font-weight:500;
+        letter-spacing:2px;
+        text-transform:uppercase;
+        color:#4ade80;
+        text-shadow:0 0 12px rgba(34,197,94,0.6);
+        margin-bottom:10px;
+    ">
+        👷 PAYROLL SYSTEM
+    </h1>
+    """,
+    unsafe_allow_html=True
+)
+    st.divider()
+    
     if st.button("➕ Add Labor", use_container_width=True):
         set_view("add_labor")
     if st.button("📝 Add Payroll Expense", use_container_width=True):
@@ -560,7 +622,33 @@ with st.sidebar:
         set_view("payroll_ledger")
     if st.button("📤 Export Payroll Report", use_container_width=True):
         set_view("payroll_export")
-    
+    st.markdown("---")
+    st.markdown(
+    """
+    <h1 style="
+        font-size:48px;
+        font-family:'inter', Impact, sans-serif;
+        font-weight:500;
+        letter-spacing:2px;
+        text-transform:uppercase;
+        color:#4ade80;
+        text-shadow:0 0 12px rgba(34,197,94,0.6);
+        margin-bottom:10px;
+    ">
+        ⚒️ TOOLS INVENTORY AND 📊STOCK MONITORING
+    </h1>
+    """,
+    unsafe_allow_html=True
+)
+    st.divider()
+    if st.button("🛠️ Add Tool", use_container_width=True):
+        set_view("tool")
+    if st.button("🧰 View Tools Inventory", use_container_width=True):
+        set_view("tools_ledger")
+    if st.button("📦 Add Stock Monitoring", use_container_width=True):
+        set_view("add_stock")
+    if st.button("📊 View Stock Inventory", use_container_width=True):
+        set_view("stock_ledger")
     st.divider()
     
     if st.button("🔄 RESET SYSTEM", use_container_width=True):
@@ -574,10 +662,9 @@ view = st.session_state.view
 if view == "home":
     st.subheader("📊 QUICK STATS")
     
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2,  col4 = st.columns(3)
     col1.metric("BUDGET", f"PHP {st.session_state.budget:,.2f}")
     col2.metric("USED", f"PHP {get_total():,.2f}")
-    col3.metric("TOOLS", f"PHP {total_tools():,.2f}")
     col4.metric("BALANCE", f"PHP {get_balance():,.2f}")
     
     st.markdown("---")
