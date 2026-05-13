@@ -74,7 +74,7 @@ def clear_all():
     st.session_state.remaining_money = 0.0
 
 def add_tx(name, price, qty, delivery, ttype, sender):
-    if float(price) <= 0 or int(qty) <= 0:
+    if float(price) <= input or int(qty) <= input:
         return False
 
     amount = (float(price) * int(qty)) + float(delivery) if ttype == "material" else float(price)
@@ -552,7 +552,7 @@ st.markdown("""
 
 # 🎛 CONTROL HUB
 with st.sidebar:
-    st.markdown("## 📱 AILY MOBILE CONTROL")
+    st.markdown("## 📱 MAIN CONTROL")
     budget_input = st.number_input("Set Project Budget", min_value=0.0, key="budget_input_sidebar", value=st.session_state.budget)
     if st.button("APPLY BUDGET", use_container_width=True):
         st.session_state.budget = float(budget_input)
@@ -628,7 +628,7 @@ if view == "home":
 
 # ➕ MATERIAL
 elif view == "material":
-    st.subheader("➕ MATERIAL (LOOP MODE)")
+    st.subheader("➕ MATERIALS INVENTORY")
     with st.form(key="material_form", clear_on_submit=True):
         name = st.text_input("Material Name")
         price = st.number_input("Price", min_value=0.01, value=0.01)
@@ -671,7 +671,7 @@ elif view == "excess":
     st.subheader("💰 EXCESS (LOOP MODE)")
     with st.form(key="excess_form", clear_on_submit=True):
         name = st.text_input("Reason")
-        amount = st.number_input("Amount", min_value=0.01, value=0.01)
+        amount = st.number_input("Amount", budget_input,)
         sender = st.selectbox("Sender", ["Garr", "Aily"])
         submitted = st.form_submit_button(label="ADD EXCESS")
     if submitted:
@@ -681,8 +681,8 @@ elif view == "excess":
                 "date": datetime.now().strftime("%b %d, %Y"),
                 "name": name.upper(),
                 "price": float(amount),
-                "qty": 1,
-                "delivery": 0.0,
+                "qty": input,
+                "delivery": input("0.00"),
                 "amount": float(amount),
                 "type": "excess",
                 "sender": sender
@@ -918,8 +918,3 @@ elif view == "payroll_export":
             st.error(f"❌ EMAIL FAILED: {e}")
 else:
     st.info("Welcome to AILY OS. Use the sidebar to navigate.")
-    def save_captured_photo(photo_file, prefix="item"):
-       if photo_file is not None:
-        with open(filename, "wb") as f:
-            f.write(photo_file.getbuffer())
-        return filename
