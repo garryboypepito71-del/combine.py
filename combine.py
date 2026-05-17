@@ -19,6 +19,69 @@ st.set_page_config(
     layout="wide",
 )
 
+st.markdown("""
+    <style>
+    /* Google Fonts Import */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Playfair+Display:wght@700&display=swap');
+
+    /* Main Container Styling */
+    .main {
+        font-family: 'Inter', sans-serif;
+        color: #FFFFFF;
+    }
+
+    /* Elegant Heading Design */
+    h1, h2, h3 {
+        font-family: 'Playfair Display', serif !important;
+        font-weight: 700 !important;
+        letter-spacing: -0.5px !important;
+        color: #50C878 !important; /* Emerald Green */
+    }
+
+    /* Unified Word/Font Sizes */
+    p, span, label, div {
+        font-size: 16px !important;
+        line-height: 1.6 !important;
+    }
+
+    /* Center-align major elements */
+    .stButton>button {
+        width: 100%;
+        border-radius: 8px;
+        border: 1px solid #50C878;
+        background-color: transparent;
+        color: white;
+        transition: 0.3s;
+        font-weight: 600;
+    }
+
+    .stButton>button:hover {
+        background-color: #50C878;
+        color: #000000;
+    }
+
+    /* Metric Alignment */
+    [data-testid="stMetricValue"] {
+        font-family: 'Inter', sans-serif !important;
+        font-weight: 600 !important;
+        font-size: 28px !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+# ═════════════════ PAGE CONFIG ═════════════════
+st.set_page_config(
+    page_title="Ailyn Construction Management",
+    page_icon="🚧",
+    layout="wide",
+)
+
+st.markdown("""
+    <style>
+    /* Elegant styling code follows... */
+    </style>
+""", unsafe_allow_html=True)
+
+
 # ═════════════════ SESSION STATE ═════════════════
 if "records" not in st.session_state:
     st.session_state.records = []  # Material/Expense records
@@ -1014,3 +1077,121 @@ elif view == "payroll_export":
             
 else:
     st.info("Welcome to AILY OS. Use the sidebar to navigate.")
+
+import streamlit as st
+import streamlit.components.v1 as components
+
+def receipt_scanner():
+    scanner_html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            body {
+                font-family: sans-serif;
+                background: #051c12;
+                color: #4ade80;
+                text-align: center;
+                margin: 0;
+                padding: 20px;
+            }
+            .container {
+                max-width: 500px;
+                margin: auto;
+                border: 1px solid #4ade80;
+                padding: 20px;
+                border-radius: 15px;
+                background: rgba(0,0,0,0.5);
+            }
+            video {
+                width: 100%;
+                border-radius: 10px;
+                background: #000;
+            }
+            canvas { display: none; }
+            img {
+                width: 100%;
+                margin-top: 10px;
+                border-radius: 10px;
+                border: 2px solid #4ade80;
+            }
+            button {
+                width: 100%;
+                padding: 15px;
+                margin: 10px 0;
+                border-radius: 10px;
+                border: none;
+                font-weight: bold;
+                cursor: pointer;
+            }
+            .btn-snap {
+                background: #4ade80;
+                color: #051c12;
+            }
+            .btn-save {
+                background: #167a44;
+                color: white;
+                display: none;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h2>📷 RECEIPT SCANNER</h2>
+            <video id="video" autoplay playsinline></video>
+            <button class="btn-snap" onclick="takeSnapshot()">📸 TAKE PHOTO</button>
+            <canvas id="canvas"></canvas>
+            <h3>Preview:</h3>
+            <img id="photo-preview" src="" alt="Snapshot will appear here">
+            <button id="save-btn" class="btn-save" onclick="downloadImage()">
+                💾 SAVE TO DEVICE
+            </button>
+        </div>
+
+        <script>
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const photoPreview = document.getElementById('photo-preview');
+            const saveBtn = document.getElementById('save-btn');
+
+            async function startCamera() {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: "environment" },
+                        audio: false
+                    });
+                    video.srcObject = stream;
+                } catch (err) {
+                    alert("Error accessing camera: " + err);
+                }
+            }
+
+            function takeSnapshot() {
+                const context = canvas.getContext('2d');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const imageData = canvas.toDataURL('image/jpeg');
+                photoPreview.src = imageData;
+                saveBtn.style.display = 'block';
+            }
+
+            function downloadImage() {
+                const link = document.createElement('a');
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                link.download = `receipt_${timestamp}.jpg`;
+                link.href = photoPreview.src;
+                link.click();
+            }
+
+            startCamera();
+        </script>
+    </body>
+    </html>
+    """
+    components.html(scanner_html, height=900, scrolling=True)
+
+if __name__ == "__main__":
+    st.markdown("<h1 style='text-align: center;'>AILY OS</h1>", unsafe_allow_html=True)
+    if st.button("📷 Open Receipt Scanner"):
+        receipt_scanner()
