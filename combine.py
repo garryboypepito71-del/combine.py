@@ -15,72 +15,9 @@ SENDER_PASSWORD = "fhyv cimp gync wjmj"
 # ═════════════════ PAGE CONFIG ═════════════════
 st.set_page_config(
     page_title="Ailyn Construction Management",
-    page_icon="🚧",
+    page_icon="🧊",
     layout="wide",
 )
-
-st.markdown("""
-    <style>
-    /* Google Fonts Import */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Playfair+Display:wght@700&display=swap');
-
-    /* Main Container Styling */
-    .main {
-        font-family: 'Inter', sans-serif;
-        color: #FFFFFF;
-    }
-
-    /* Elegant Heading Design */
-    h1, h2, h3 {
-        font-family: 'Playfair Display', serif !important;
-        font-weight: 700 !important;
-        letter-spacing: -0.5px !important;
-        color: #50C878 !important; /* Emerald Green */
-    }
-
-    /* Unified Word/Font Sizes */
-    p, span, label, div {
-        font-size: 16px !important;
-        line-height: 1.6 !important;
-    }
-
-    /* Center-align major elements */
-    .stButton>button {
-        width: 100%;
-        border-radius: 8px;
-        border: 1px solid #50C878;
-        background-color: transparent;
-        color: white;
-        transition: 0.3s;
-        font-weight: 600;
-    }
-
-    .stButton>button:hover {
-        background-color: #50C878;
-        color: #000000;
-    }
-
-    /* Metric Alignment */
-    [data-testid="stMetricValue"] {
-        font-family: 'Inter', sans-serif !important;
-        font-weight: 600 !important;
-        font-size: 28px !important;
-    }
-    </style>
-""", unsafe_allow_html=True)
-# ═════════════════ PAGE CONFIG ═════════════════
-st.set_page_config(
-    page_title="Ailyn Construction Management",
-    page_icon="🚧",
-    layout="wide",
-)
-
-st.markdown("""
-    <style>
-    /* Elegant styling code follows... */
-    </style>
-""", unsafe_allow_html=True)
-
 
 # ═════════════════ SESSION STATE ═════════════════
 if "records" not in st.session_state:
@@ -91,12 +28,6 @@ if "labor_records" not in st.session_state:
 
 if "payroll_expenses" not in st.session_state:
     st.session_state.payroll_expenses = []  # Payroll expense records
-
-if "tools_records" not in st.session_state:
-    st.session_state.tools_records = []  # Tools inventory records
-
-if "material_inventory" not in st.session_state:
-    st.session_state.material_inventory = []  # Stock monitoring records
 
 if "budget" not in st.session_state:
     st.session_state.budget = 0.0
@@ -131,8 +62,6 @@ def clear_all():
     st.session_state.records = []
     st.session_state.labor_records = []
     st.session_state.payroll_expenses = []
-    st.session_state.tools_records = []
-    st.session_state.material_inventory = []
     st.session_state.budget = 0.0
     st.session_state.remaining_money = 0.0
 
@@ -154,11 +83,6 @@ def add_tx(name, price, qty, delivery, ttype, sender):
         "sender": sender
     })
     return True
-
-
-def total_tools():
-    return sum(r["amount"] for r in st.session_state.tools_records)
-
 
 # ═════════════════ REPORT MANAGER (MATERIAL) ═════════════════
 def build_html_report(records, budget):
@@ -444,11 +368,11 @@ st.markdown("""
     button {
         width: 100% !important;
         margin-bottom: 8px !important;
-        font-size: 26px !important;
+        font-size: 16px !important;
         padding: 12px !important;
     }
     input {
-        font-size: 26px !important;
+        font-size: 16px !important;
     }
     .stColumns {
         flex-direction: column !important;
@@ -552,18 +476,18 @@ h1, h2, h3 {
 
 .intro {
     text-align: center;
-    padding: 60px;
-    color: #2E0854;
+    padding: 16px;
+    color: #ffffff;
 }
 
 .intro h1 {
-    font-size: 60px;
-    font-weight: 1000;
-    color: #2E0854;
+    font-size: 28px;
+    font-weight: 800;
+    color: #4ade80;
 }
 
 .intro p {
-    font-size: 89px;
+    font-size: 13px;
     color: #a3e635;
     opacity: 0.9;
 }
@@ -572,109 +496,43 @@ h1, h2, h3 {
 
 st.markdown("""
 <div class="intro">
-      <h1>🏗️ AILYN HOUSE PROJECT & PAYROLL</h1>
-    <p style="font-size: 18px; color: #a3e635;">Combined System | Mobile Operating Engine v30000</p>
+    <h1>🏗️ AILYN HOUSE PROJECT & PAYROLL</h1>
+    <p>Combined System | Mobile Operating Engine v30000</p>
 </div>
 """, unsafe_allow_html=True)
 
 # 🎛 CONTROL HUB
 with st.sidebar:
-    st.markdown("## 📱 MAIN CONTROL")
-    st.markdown("---")
-    st.markdown(
-    """
-    <h1 style="
-        font-size:50px;
-        font-family:'inter', Impact, sans-serif;
-        font-weight:50;
-        letter-spacing:2px;
-        text-transform:uppercase;
-        color:#4ade80;
-        text-shadow:0 0 12px rgba(34,197,94,0.6);
-        margin-bottom:10px;
-    ">
-       🏠 Navigation
-    </h1>
-    """,
-    unsafe_allow_html=True
-)
-    st.divider()
-    if st.button("🏠 Project Summary / Home", use_container_width=True):
-        set_view("home")
-    st.markdown("---")
-    st.markdown(
-    """
-    <h1 style="
-        font-size:50px;
-        font-family:'inter', Impact, sans-serif;
-        font-weight:50;
-        letter-spacing:2px;
-        text-transform:uppercase;
-        color:#4ade80;
-        text-shadow:0 0 12px rgba(34,197,94,0.6);
-        margin-bottom:10px;
-    ">
-       💰 BUDGET SUMMARY 💸
-    </h1>
-    """,
-    unsafe_allow_html=True
-)
-    st.divider()
+    st.markdown("## 📱 AILY MOBILE CONTROL")
+    
     budget_input = st.number_input("Set Project Budget", min_value=0.0, key="budget_input_sidebar", value=st.session_state.budget)
     if st.button("APPLY BUDGET", use_container_width=True):
         st.session_state.budget = float(budget_input)
         st.success("Budget applied!")
         st.rerun()
-    if st.button("💰 Add Excess Money", use_container_width=True):
-        set_view("excess")
-   # This will show: May 13, 2026 (Month Day, Year)
-    st.caption(f"📅 {datetime.now().strftime('%B %d, %Y')}")    
-    st.markdown("---")
-    st.markdown(
-    """
-    <h1 style="
-        font-size:50px;
-        font-family:'inter', Impact, sans-serif;
-        font-weight:50;
-        letter-spacing:2px;
-        text-transform:uppercase;
-        color:#4ade80;
-        text-shadow:0 0 12px rgba(34,197,94,0.6);
-        margin-bottom:10px;
-    ">
-        🧱 Construction Ledger
-    </h1>
-    """,
-    unsafe_allow_html=True
-)
+        
+    st.caption(f"{datetime.now().strftime('%I:%M %p | %b %d')}")
     st.divider()
+
+    st.subheader("🏠 Navigation")
+    if st.button("🏠 Project Summary / Home", use_container_width=True):
+        set_view("home")
+        
+    st.markdown("---")
+    st.subheader("🧱 Construction Ledger")
     if st.button("➕ Add Material", use_container_width=True):
         set_view("material")
+    if st.button("📝 Add Construction Expense", use_container_width=True):
+        set_view("expense")
+    if st.button("💰 Add Excess Money", use_container_width=True):
+        set_view("excess")
     if st.button("📋 View Project Ledger", use_container_width=True):
         set_view("ledger")
     if st.button("📤 Export Construction Report", use_container_width=True):
         set_view("export")
-
+        
     st.markdown("---")
-    st.markdown(
-    """
-    <h1 style="
-        font-size:50px;
-        font-family:'inter', Impact, sans-serif;
-        font-weight:50;
-        letter-spacing:2px;
-        text-transform:uppercase;
-        color:#4ade80;
-        text-shadow:0 0 12px rgba(34,197,94,0.6);
-        margin-bottom:10px;
-    ">
-        👷 PAYROLL SYSTEM
-    </h1>
-    """,
-    unsafe_allow_html=True
-)
-    st.divider()
-    
+    st.subheader("👷 Payroll System")
     if st.button("➕ Add Labor", use_container_width=True):
         set_view("add_labor")
     if st.button("📝 Add Payroll Expense", use_container_width=True):
@@ -685,33 +543,7 @@ with st.sidebar:
         set_view("payroll_ledger")
     if st.button("📤 Export Payroll Report", use_container_width=True):
         set_view("payroll_export")
-    st.markdown("---")
-    st.markdown(
-    """
-    <h1 style="
-        font-size:50px;
-        font-family:'inter', Impact, sans-serif;
-        font-weight:50;
-        letter-spacing:2px;
-        text-transform:uppercase;
-        color:#4ade80;
-        text-shadow:0 0 12px rgba(34,197,94,0.6);
-        margin-bottom:10px;
-    ">
-        ⚒️ TOOLS INVENTORY AND 📊STOCK MONITORING
-    </h1>
-    """,
-    unsafe_allow_html=True
-)
-    st.divider()
-    if st.button("🛠️ Add Tool", use_container_width=True):
-        set_view("tool")
-    if st.button("🧰 View Tools Inventory", use_container_width=True):
-        set_view("tools_ledger")
-    if st.button("📦 Add Stock Monitoring", use_container_width=True):
-        set_view("add_stock")
-    if st.button("📊 View Stock Inventory", use_container_width=True):
-        set_view("stock_ledger")
+    
     st.divider()
     
     if st.button("🔄 RESET SYSTEM", use_container_width=True):
@@ -725,10 +557,10 @@ view = st.session_state.view
 if view == "home":
     st.subheader("📊 QUICK STATS")
     
-    col1, col2,  col4 = st.columns(3)
+    col1, col2, col3 = st.columns(3)
     col1.metric("BUDGET", f"PHP {st.session_state.budget:,.2f}")
     col2.metric("USED", f"PHP {get_total():,.2f}")
-    col4.metric("BALANCE", f"PHP {get_balance():,.2f}")
+    col3.metric("BALANCE", f"PHP {get_balance():,.2f}")
     
     st.markdown("---")
     
@@ -767,7 +599,7 @@ elif view == "material":
             st.warning("Invalid data, please check amounts.")
 
     st.divider()
-    if st.button("DONE", use_container_width=True):
+    if st.button("🏁 FINISH LOOP", use_container_width=True):
         set_view("home")
 
 # 📝 EXPENSE
@@ -790,7 +622,7 @@ elif view == "expense":
             st.warning("Amount must be greater than zero.")
 
     st.divider()
-    if st.button("⚒️DONE", use_container_width=True):
+    if st.button("🏁 FINISH LOOP", use_container_width=True):
         set_view("home")
 
 # 💰 EXCESS
@@ -823,109 +655,8 @@ elif view == "excess":
             st.warning("Please enter a valid amount.")
 
     st.divider()
-    if st.button("⚒️DONE", use_container_width=True):
+    if st.button("🏁 FINISH LOOP", use_container_width=True):
         set_view("home")
-
-# 🛠️ TOOL
-elif view == "tool":
-    st.subheader("🛠️ ADD TOOL (LOOP MODE)")
-
-    with st.form(key="tool_form", clear_on_submit=True):
-        name = st.text_input("Tool Name")
-        price = st.number_input("Tool Price", min_value=0.01, value=0.01)
-        qty = st.number_input("Quantity", min_value=1, value=1)
-        sender = st.selectbox("Sender", ["Garr", "Aily"], key="tool_sender")
-        submitted = st.form_submit_button("SAVE TOOL")
-
-    if submitted:
-        if name.strip() and price > 0 and qty > 0:
-            st.session_state.tools_records.append({
-                "id": str(time.time()),
-                "date": datetime.now().strftime("%b %d, %Y"),
-                "name": name.upper(),
-                "price": float(price),
-                "qty": int(qty),
-                "amount": float(price) * int(qty),
-                "sender": sender,
-                "type": "tool"
-            })
-            st.success("Tool saved successfully.")
-            st.rerun()
-        else:
-            st.warning("Please enter valid tool data.")
-
-    if st.button("DONE", use_container_width=True):
-        set_view("home")
-
-# 🧰 TOOLS LEDGER
-elif view == "tools_ledger":
-    st.subheader("🧰 TOOLS INVENTORY")
-
-    if not st.session_state.tools_records:
-        st.info("No tools recorded.")
-    else:
-        for r in list(st.session_state.tools_records):
-            st.markdown(f"""
-            ---
-            **{r['name']}** 🔧 Qty: {r['qty']}  
-           
-            📅 {r['date']}
-            """)
-            if st.button("❌ DELETE TOOL", key=f"del_tool_{r['id']}", use_container_width=True):
-                st.session_state.tools_records = [
-                    x for x in st.session_state.tools_records if x["id"] != r["id"]
-                ]
-                st.rerun()
-
-# 📦 ADD STOCK
-elif view == "add_stock":
-    st.subheader("📦 ADD STOCK (MONITORING)")
-
-    with st.form(key="stock_form", clear_on_submit=True):
-        name = st.text_input("Item Name (e.g. Cement, Rebar)")
-        qty = st.number_input("Quantity", min_value=1, value=1)
-        unit = st.text_input("Unit (e.g. Bags, PCS)")
-        sender = st.selectbox("Who recorded?", ["Garr", "Aily"], key="stock_sender")
-        submitted = st.form_submit_button("SAVE STOCK")
-        
-
-    if submitted:
-        if name.strip():
-            st.session_state.material_inventory.append({
-                "id": str(time.time()),
-                "date": datetime.now().strftime("%b %d, %Y"),
-                "name": name.upper(),
-                "qty": int(qty),
-                "unit": unit.upper(),
-                "sender": sender
-            })
-            st.success("Stock recorded.")
-            st.rerun()
-        else:
-            st.warning("Please enter item name.")
-
-    if st.button("DONE", use_container_width=True):
-        set_view("home")
-
-# 📊 STOCK LEDGER
-elif view == "stock_ledger":
-    st.subheader("📊 STOCK INVENTORY MONITORING")
-
-    if not st.session_state.material_inventory:
-        st.info("No stock records yet.")
-    else:
-        for r in list(st.session_state.material_inventory):
-            st.markdown(f"""
-            ---
-            **{r['name']}** 📦 {r['qty']} {r['unit']}  
-            👤 {r['sender']}  
-            📅 {r['date']}
-            """)
-            if st.button("❌ DELETE STOCK", key=f"del_stock_{r['id']}", use_container_width=True):
-                st.session_state.material_inventory = [
-                    x for x in st.session_state.material_inventory if x["id"] != r["id"]
-                ]
-                st.rerun()
 
 # 📋 LEDGER
 elif view == "ledger":
