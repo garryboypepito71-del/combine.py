@@ -4,6 +4,7 @@ from datetime import datetime
 import streamlit as st
 import smtplib
 from email.message import EmailMessage
+from persistence import list_saved_reports, load_state, save_report_html, save_state
 
 # ═════════════════ CONFIGURATION ═════════════════
 APP_VERSION = "AILY OS v30000 — GREEN EMERALD CORE"
@@ -20,14 +21,20 @@ st.set_page_config(
 )
 
 # ═════════════════ SESSION STATE ═════════════════
+state_data = load_state()
+
+for key, value in state_data.items():
+    if key not in st.session_state:
+        st.session_state[key] = value
+
 if "records" not in st.session_state:
-    st.session_state.records = []  # Material/Expense records
+    st.session_state.records = []
 
 if "labor_records" not in st.session_state:
-    st.session_state.labor_records = []  # Labor records
+    st.session_state.labor_records = []
 
 if "payroll_expenses" not in st.session_state:
-    st.session_state.payroll_expenses = []  # Payroll expense records
+    st.session_state.payroll_expenses = []
 
 if "budget" not in st.session_state:
     st.session_state.budget = 0.0
@@ -41,6 +48,7 @@ if "view" not in st.session_state:
 # ═════════════════ CORE LOGIC (MATERIAL/EXPENSE) ═════════════════
 def set_view(v):
     st.session_state.view = v
+    persist_state()
     st.rerun()
 
 def total_materials():
@@ -64,6 +72,12 @@ def clear_all():
     st.session_state.payroll_expenses = []
     st.session_state.budget = 0.0
     st.session_state.remaining_money = 0.0
+    st.session_state.view = "home"
+    save_state(st.session_state)
+
+
+def persist_state():
+    save_state(st.session_state)
 
 def add_tx(name, price, qty, delivery, ttype, sender):
     if float(price) <= 0 or int(qty) <= 0:
@@ -82,6 +96,7 @@ def add_tx(name, price, qty, delivery, ttype, sender):
         "type": ttype,
         "sender": sender
     })
+    persist_state()
     return True
 
 # ═════════════════ REPORT MANAGER (MATERIAL) ═════════════════
@@ -508,6 +523,7 @@ with st.sidebar:
     budget_input = st.number_input("Set Project Budget", min_value=0.0, key="budget_input_sidebar", value=st.session_state.budget)
     if st.button("APPLY BUDGET", use_container_width=True):
         st.session_state.budget = float(budget_input)
+        persist_state()
         st.success("Budget applied!")
         st.rerun()
         
@@ -649,6 +665,7 @@ elif view == "excess":
                 "type": "excess",
                 "sender": sender
             })
+            persist_state()
             st.success("Excess Added")
             st.rerun()
         else:
@@ -678,6 +695,7 @@ elif view == "ledger":
                 st.session_state.records = [
                     x for x in st.session_state.records if x["id"] != r["id"]
                 ]
+                persist_state()
                 st.rerun()
 
 # 📤 EXPORT
@@ -685,6 +703,7 @@ elif view == "export":
     st.subheader("📤 EXPORT CONSTRUCTION REPORT")
 
     html = build_html_report(st.session_state.records, st.session_state.budget)
+    archive_path = save_report_html("construction", html)
 
     st.download_button(
         label="DOWNLOAD CONSTRUCTION REPORT",
@@ -693,6 +712,24 @@ elif view == "export":
         mime="text/html",
         use_container_width=True
     )
+
+    st.success(f"Saved receipt archive: {archive_path}")
+    st.markdown("### 📁 Saved Construction Receipts")
+    saved_reports = list_saved_reports("construction")
+    if not saved_reports:
+        st.info("No saved construction receipts yet.")
+    else:
+        for report_path in saved_reports:
+            st.markdown(f"- [{report_path.name}]({report_path.as_posix()})")
+            with open(report_path, "r", encoding="utf-8") as handle:
+                report_html = handle.read()
+            st.download_button(
+                label="⬇️ Download this receipt",
+                data=report_html,
+                file_name=report_path.name,
+                mime="text/html",
+                use_container_width=True
+            )
 
     st.markdown("📧 **Receivers Enabled:**")
     st.write("Garry ✔")
@@ -720,6 +757,7 @@ elif view == "add_labor":
             "ca": ca,
             "net": net
         })
+        persist_state()
         st.success(f"Record for {name.upper()} added.")
         st.rerun()
 
@@ -736,6 +774,7 @@ elif view == "add_payroll_expense":
             "item": desc.upper(),
             "price": amt
         })
+        persist_state()
         st.success(f"Expense {desc.upper()} added.")
         st.rerun()
 
@@ -744,6 +783,7 @@ elif view == "payroll_remaining":
     res = st.number_input("Leftover/Remaining money to subtract from total", min_value=0.0, value=st.session_state.remaining_money)
     if st.button("Apply"):
         st.session_state.remaining_money = res
+        persist_state()
         st.success("Remaining money applied.")
         st.rerun()
 
@@ -761,6 +801,7 @@ elif view == "payroll_ledger":
         """)
         if st.button("Delete Labor", key=f"del_lab_{i}"):
             st.session_state.labor_records.pop(i)
+            persist_state()
             st.rerun()
             
     st.markdown("---")
@@ -773,6 +814,7 @@ elif view == "payroll_ledger":
         """)
         if st.button("Delete Payroll Expense", key=f"del_pay_exp_{i}"):
             st.session_state.payroll_expenses.pop(i)
+            persist_state()
             st.rerun()
 
 elif view == "payroll_export":
@@ -783,6 +825,7 @@ elif view == "payroll_export":
         st.session_state.payroll_expenses, 
         st.session_state.remaining_money
     )
+    archive_path = save_report_html("payroll", html)
     
     st.download_button(
         label="DOWNLOAD PAYROLL REPORT",
@@ -791,6 +834,24 @@ elif view == "payroll_export":
         mime="text/html",
         use_container_width=True
     )
+
+    st.success(f"Saved payroll receipt archive: {archive_path}")
+    st.markdown("### 📁 Saved Payroll Receipts")
+    saved_reports = list_saved_reports("payroll")
+    if not saved_reports:
+        st.info("No saved payroll receipts yet.")
+    else:
+        for report_path in saved_reports:
+            st.markdown(f"- [{report_path.name}]({report_path.as_posix()})")
+            with open(report_path, "r", encoding="utf-8") as handle:
+                report_html = handle.read()
+            st.download_button(
+                label="⬇️ Download this receipt",
+                data=report_html,
+                file_name=report_path.name,
+                mime="text/html",
+                use_container_width=True
+            )
     
     if st.button("📧 Email Report"):
         try:
