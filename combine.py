@@ -705,10 +705,14 @@ elif view == "export":
     st.subheader("📤 EXPORT CONSTRUCTION REPORT")
 
     html = build_html_report(st.session_state.records, st.session_state.budget)
+    receipt_title = st.text_input("Receipt title", value="Construction Receipt", placeholder="Enter a title for this receipt")
 
     if st.button("💾 Save this receipt to archive", use_container_width=True):
-        archive_path = save_report_html("construction", html)
-        st.success(f"Saved to archive: {archive_path}")
+        if receipt_title.strip():
+            archive_path = save_report_html("construction", html, title=receipt_title)
+            st.success(f"Saved to archive: {archive_path}")
+        else:
+            st.warning("Please enter a title before saving.")
 
     st.download_button(
         label="⬇️ Download current construction report",
@@ -815,10 +819,14 @@ elif view == "payroll_export":
         st.session_state.payroll_expenses, 
         st.session_state.remaining_money
     )
+    receipt_title = st.text_input("Receipt title", value="Payroll Receipt", placeholder="Enter a title for this receipt")
     
     if st.button("💾 Save this receipt to archive", use_container_width=True):
-        archive_path = save_report_html("payroll", html)
-        st.success(f"Saved to archive: {archive_path}")
+        if receipt_title.strip():
+            archive_path = save_report_html("payroll", html, title=receipt_title)
+            st.success(f"Saved to archive: {archive_path}")
+        else:
+            st.warning("Please enter a title before saving.")
     
     st.download_button(
         label="⬇️ Download current payroll report",

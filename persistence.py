@@ -79,11 +79,12 @@ def get_receipt_folder(report_type, base_dir=None):
     return folder
 
 
-def save_report_html(report_type, html, base_dir=None):
+def save_report_html(report_type, html, title=None, base_dir=None):
     folder = get_receipt_folder(report_type, base_dir)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    safe_title = re.sub(r"[^A-Za-z0-9._-]+", "_", title or "receipt").strip("_") or "receipt"
     safe_type = re.sub(r"[^A-Za-z0-9._-]+", "_", report_type).strip("_") or "report"
-    file_name = f"{safe_type}_{timestamp}.html"
+    file_name = f"{safe_type}_{safe_title}_{timestamp}.html"
     path = folder / file_name
     path.write_text(html, encoding="utf-8")
     return path
