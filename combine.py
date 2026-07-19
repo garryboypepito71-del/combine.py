@@ -559,6 +559,8 @@ with st.sidebar:
         set_view("payroll_ledger")
     if st.button("📤 Export Payroll Report", use_container_width=True):
         set_view("payroll_export")
+    if st.button("📁 Receipt Archive", use_container_width=True):
+        set_view("receipt_archive")
     
     st.divider()
     
@@ -703,33 +705,21 @@ elif view == "export":
     st.subheader("📤 EXPORT CONSTRUCTION REPORT")
 
     html = build_html_report(st.session_state.records, st.session_state.budget)
-    archive_path = save_report_html("construction", html)
+
+    if st.button("💾 Save this receipt to archive", use_container_width=True):
+        archive_path = save_report_html("construction", html)
+        st.success(f"Saved to archive: {archive_path}")
 
     st.download_button(
-        label="DOWNLOAD CONSTRUCTION REPORT",
+        label="⬇️ Download current construction report",
         data=html,
         file_name="aily_mobile_report.html",
         mime="text/html",
         use_container_width=True
     )
 
-    st.success(f"Saved receipt archive: {archive_path}")
-    st.markdown("### 📁 Saved Construction Receipts")
-    saved_reports = list_saved_reports("construction")
-    if not saved_reports:
-        st.info("No saved construction receipts yet.")
-    else:
-        for report_path in saved_reports:
-            st.markdown(f"- [{report_path.name}]({report_path.as_posix()})")
-            with open(report_path, "r", encoding="utf-8") as handle:
-                report_html = handle.read()
-            st.download_button(
-                label="⬇️ Download this receipt",
-                data=report_html,
-                file_name=report_path.name,
-                mime="text/html",
-                use_container_width=True
-            )
+    if st.button("📁 Open receipt archive", use_container_width=True):
+        set_view("receipt_archive")
 
     st.markdown("📧 **Receivers Enabled:**")
     st.write("Garry ✔")
@@ -825,33 +815,21 @@ elif view == "payroll_export":
         st.session_state.payroll_expenses, 
         st.session_state.remaining_money
     )
-    archive_path = save_report_html("payroll", html)
+    
+    if st.button("💾 Save this receipt to archive", use_container_width=True):
+        archive_path = save_report_html("payroll", html)
+        st.success(f"Saved to archive: {archive_path}")
     
     st.download_button(
-        label="DOWNLOAD PAYROLL REPORT",
+        label="⬇️ Download current payroll report",
         data=html,
         file_name="payroll_report.html",
         mime="text/html",
         use_container_width=True
     )
 
-    st.success(f"Saved payroll receipt archive: {archive_path}")
-    st.markdown("### 📁 Saved Payroll Receipts")
-    saved_reports = list_saved_reports("payroll")
-    if not saved_reports:
-        st.info("No saved payroll receipts yet.")
-    else:
-        for report_path in saved_reports:
-            st.markdown(f"- [{report_path.name}]({report_path.as_posix()})")
-            with open(report_path, "r", encoding="utf-8") as handle:
-                report_html = handle.read()
-            st.download_button(
-                label="⬇️ Download this receipt",
-                data=report_html,
-                file_name=report_path.name,
-                mime="text/html",
-                use_container_width=True
-            )
+    if st.button("📁 Open receipt archive", use_container_width=True):
+        set_view("receipt_archive")
     
     if st.button("📧 Email Report"):
         try:
@@ -866,6 +844,35 @@ elif view == "payroll_export":
             st.success("🚀 SUCCESS! Emailed report.")
         except Exception as e:
             st.error(f"❌ EMAIL FAILED: {e}")
+
+elif view == "receipt_archive":
+    st.subheader("📁 RECEIPT ARCHIVE")
+    st.caption("Browse saved receipts in neat construction and payroll folders.")
+
+    if st.button("⬅️ Back to construction export", use_container_width=True):
+        set_view("export")
+    if st.button("⬅️ Back to payroll export", use_container_width=True):
+        set_view("payroll_export")
+
+    for title, report_type in [("🏗️ Construction Receipts", "construction"), ("👷 Payroll Receipts", "payroll")]:
+        with st.expander(title, expanded=True):
+            saved_reports = list_saved_reports(report_type)
+            if not saved_reports:
+                st.info(f"No saved {report_type} receipts yet.")
+                continue
+
+            for report_path in saved_reports:
+                st.markdown(f"- **{report_path.name}**")
+                with open(report_path, "r", encoding="utf-8") as handle:
+                    report_html = handle.read()
+                st.download_button(
+                    label="⬇️ Download this receipt",
+                    data=report_html,
+                    file_name=report_path.name,
+                    mime="text/html",
+                    use_container_width=True,
+                    key=f"download_{report_type}_{report_path.name}"
+                )
             
 else:
     st.info("Welcome to AILY OS. Use the sidebar to navigate.")
