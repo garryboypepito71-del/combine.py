@@ -372,9 +372,21 @@ def generate_payroll_html(labor_records, expense_records, remaining_money=0.0):
 # ═════════════════ CSS & 3D GREEN INTERFACE ═════════════════
 st.markdown("""
 <style>
+:root {
+    --bg-deep: #07110b;
+    --bg-panel: rgba(8, 24, 15, 0.78);
+    --bg-panel-2: rgba(13, 39, 24, 0.9);
+    --line: rgba(132, 255, 179, 0.16);
+    --text-main: #f4fff7;
+    --text-soft: #acebb3;
+    --accent: #4ade80;
+    --accent-strong: #22c55e;
+    --accent-warm: #fbbf24;
+}
+
 @media (max-width: 768px) {
     .block-container {
-        padding: 10px !important;
+        padding: 12px !important;
     }
     h1, h2, h3 {
         font-size: 18px !important;
@@ -383,7 +395,7 @@ st.markdown("""
     button {
         width: 100% !important;
         margin-bottom: 8px !important;
-        font-size: 16px !important;
+        font-size: 15px !important;
         padding: 12px !important;
     }
     input {
@@ -398,90 +410,101 @@ st.markdown("""
     background: url("https://images.unsplash.com/photo-1600585154340-be6161a56a0c") no-repeat center center fixed;
     background-size: cover;
     background-position: center;
+    min-height: 100vh;
 }
 
 .block-container {
-    background: rgba(20, 50, 35, 0.65) !important;
-    backdrop-filter: blur(16px);
-    border-radius: 20px;
-    border: 1px solid rgba(135, 255, 180, 0.2);
-    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
+    background: rgba(20, 50, 35, 0.68) !important;
+    backdrop-filter: blur(18px);
+    border-radius: 24px;
+    border: 1px solid rgba(135, 255, 180, 0.18);
+    box-shadow: 0 18px 54px rgba(0, 0, 0, 0.38);
     padding: 24px;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .block-container:hover {
-    transform: scale(1.01);
-    box-shadow: 0 16px 64px rgba(72, 239, 127, 0.15);
+    transform: translateY(-1px);
+    box-shadow: 0 22px 64px rgba(72, 239, 127, 0.16);
 }
 
 section[data-testid="stSidebar"] {
-    background: rgba(10, 30, 20, 0.85) !important;
+    background: rgba(6, 19, 13, 0.96) !important;
     backdrop-filter: blur(20px);
-    border-right: 1px solid rgba(135, 255, 180, 0.1);
+    border-right: 1px solid rgba(132, 255, 179, 0.14);
 }
 
-button {
-    background: linear-gradient(145deg, #0b4e2f, #167a44);
+button, .stDownloadButton > button {
+    background: linear-gradient(145deg, rgba(11, 78, 47, 0.96), rgba(22, 122, 68, 0.92));
     color: #ffffff !important;
-    border-radius: 14px !important;
-    transition: all 0.15s ease-in-out;
-    border: 1px solid rgba(135, 255, 180, 0.4);
-    font-weight: bold;
-    min-height: 45px;
+    border-radius: 16px !important;
+    transition: all 0.16s ease-in-out;
+    border: 1px solid rgba(135, 255, 180, 0.28);
+    font-weight: 700;
+    min-height: 46px;
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.16),
+        0 8px 18px rgba(0, 0, 0, 0.22),
+        0 2px 8px rgba(34, 197, 94, 0.18);
+    backdrop-filter: blur(10px);
 }
 
-button:hover {
-    transform: scale(1.02);
-    box-shadow: 0 6px 18px rgba(72, 239, 127, 0.3);
-    border-color: #a3e635;
-    background: linear-gradient(145deg, #167a44, #14a44d);
+button:hover, .stDownloadButton > button:hover {
+    transform: translateY(-2px);
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.2),
+        0 12px 24px rgba(72, 239, 127, 0.24),
+        0 4px 12px rgba(0, 0, 0, 0.24);
+    border-color: rgba(163, 230, 53, 0.7);
+    background: linear-gradient(145deg, rgba(22, 122, 68, 0.98), rgba(20, 164, 77, 0.96));
 }
 
-button:active {
+button:active, .stDownloadButton > button:active {
     transform: scale(0.98);
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.24);
 }
 
 input, textarea, select {
-    background: rgba(255, 255, 255, 0.08) !important;
-    border: 1px solid rgba(135, 255, 180, 0.3) !important;
-    color: #4ade80 !important;
-    border-radius: 10px !important;
-    backdrop-filter: blur(8px);
-    font-size: 16px !important;
-    min-height: 40px;
-    padding: 6px 12px;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(135, 255, 180, 0.24) !important;
+    color: #f8fff9 !important;
+    border-radius: 12px !important;
+    backdrop-filter: blur(10px);
+    font-size: 15px !important;
+    min-height: 44px;
+    padding: 8px 12px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
 
 input:focus, textarea:focus, select:focus {
     border-color: #22c55e !important;
-    box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.28);
+    transform: translateY(-1px);
 }
 
 h1, h2, h3 {
-    color: #4ade80 !important;
-    text-shadow: 0 0 6px rgba(34, 197, 94, 0.3);
-    letter-spacing: 0.5px;
+    color: #ecfff1 !important;
+    text-shadow: 0 0 8px rgba(34, 197, 94, 0.22);
+    letter-spacing: 0.4px;
 }
 
 [data-testid="stMetric"] {
-    background: rgba(15, 45, 30, 0.7);
-    border-radius: 16px;
+    background: linear-gradient(145deg, rgba(14, 44, 24, 0.95), rgba(8, 32, 18, 0.9));
+    border-radius: 18px;
     padding: 12px;
-    border: 1px solid rgba(135, 255, 180, 0.2);
+    border: 1px solid rgba(132, 255, 179, 0.16);
     margin-bottom: 12px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-    transition: transform 0.2s ease;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
+    transition: transform 0.2s ease, border-color 0.2s ease;
 }
 
 [data-testid="stMetric"]:hover {
     transform: translateY(-2px);
-    border-color: #4ade80;
+    border-color: rgba(132, 255, 179, 0.42);
 }
 
 [data-testid="stMetric"] label {
-    color: #a3e635 !important;
+    color: #b8f5c1 !important;
     font-weight: 600;
 }
 
@@ -489,36 +512,102 @@ h1, h2, h3 {
     color: #ffffff !important;
 }
 
+.stAlert, .stSuccess, .stWarning, .stInfo {
+    border-radius: 12px !important;
+    border: 1px solid rgba(132, 255, 179, 0.16) !important;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.16) !important;
+}
+
+.hero-card {
+    background: linear-gradient(135deg, rgba(12, 34, 21, 0.9), rgba(5, 20, 12, 0.8));
+    border: 1px solid rgba(135, 255, 180, 0.18);
+    border-radius: 24px;
+    padding: 22px 24px;
+    margin-bottom: 18px;
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.08),
+        0 16px 44px rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(12px);
+}
+
+.hero-badge {
+    display: inline-block;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(74, 222, 128, 0.14);
+    color: #b7f5c2;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 10px;
+}
+
+.section-pill {
+    display: inline-block;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(251, 191, 36, 0.12);
+    color: #fde68a;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 10px;
+}
+
+.sidebar-brand {
+    padding: 8px 10px 12px 10px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(15, 41, 25, 0.96), rgba(7, 23, 14, 0.92));
+    border: 1px solid rgba(132, 255, 179, 0.16);
+    margin-bottom: 12px;
+}
+
+.sidebar-brand h3 {
+    margin: 0 0 4px 0;
+    color: #ecfff1 !important;
+    font-size: 16px;
+}
+
+.sidebar-brand p {
+    margin: 0;
+    color: #b8f5c1;
+    font-size: 12px;
+}
+
 .intro {
     text-align: center;
-    padding: 16px;
     color: #ffffff;
 }
 
 .intro h1 {
-    font-size: 28px;
+    font-size: 30px;
     font-weight: 800;
-    color: #4ade80;
-}
-
-.intro p {
-    font-size: 13px;
-    color: #a3e635;
-    opacity: 0.9;
+    color: #ecfff1;
+    margin: 0;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-family: 'Georgia', 'Times New Roman', serif;
+    text-shadow: 0 2px 10px rgba(255,255,255,0.12);
 }
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown("""
-<div class="intro">
+<div class="hero-card intro">
     <h1>🏗️ AILYN HOUSE PROJECT & PAYROLL</h1>
-    <p>Combined System | Mobile Operating Engine v30000</p>
 </div>
 """, unsafe_allow_html=True)
 
 # 🎛 CONTROL HUB
 with st.sidebar:
-    st.markdown("## 📱 AILY MOBILE CONTROL")
+    st.markdown("""
+    <div class="sidebar-brand">
+        <h3>📱 AILY MOBILE CONTROL</h3>
+        <p>Construction • Payroll • Receipts</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     budget_input = st.number_input("Set Project Budget", min_value=0.0, key="budget_input_sidebar", value=st.session_state.budget)
     if st.button("APPLY BUDGET", use_container_width=True):
@@ -573,6 +662,7 @@ view = st.session_state.view
 
 # 🏠 HOME
 if view == "home":
+    st.markdown("<div class='section-pill'>Live overview</div>", unsafe_allow_html=True)
     st.subheader("📊 QUICK STATS")
     
     col1, col2, col3 = st.columns(3)
