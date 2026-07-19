@@ -94,3 +94,11 @@ def list_saved_reports(report_type, base_dir=None):
     folder = get_receipt_folder(report_type, base_dir)
     files = sorted(folder.glob("*.html"), key=lambda item: item.stat().st_mtime, reverse=True)
     return files
+
+
+def delete_report_file(report_path, base_dir=None):
+    path = Path(report_path)
+    if not path.exists():
+        return False
+    path.unlink(missing_ok=True)
+    return True

@@ -4,7 +4,7 @@ from datetime import datetime
 import streamlit as st
 import smtplib
 from email.message import EmailMessage
-from persistence import list_saved_reports, load_state, save_report_html, save_state
+from persistence import delete_report_file, list_saved_reports, load_state, save_report_html, save_state
 
 # ═════════════════ CONFIGURATION ═════════════════
 APP_VERSION = "AILY OS v30000 — GREEN EMERALD CORE"
@@ -971,6 +971,10 @@ elif view == "receipt_archive":
                     use_container_width=True,
                     key=f"download_{report_type}_{report_path.name}"
                 )
+                if st.button("🗑️ Delete this receipt", key=f"delete_{report_type}_{report_path.name}", use_container_width=True):
+                    delete_report_file(report_path)
+                    st.success(f"Deleted: {report_path.name}")
+                    st.rerun()
             
 else:
     st.info("Welcome to AILY OS. Use the sidebar to navigate.")
