@@ -1,10 +1,47 @@
 import os
 import time
+import base64
 from datetime import datetime
 import streamlit as st
 import smtplib
 from email.message import EmailMessage
-from persistence import delete_report_file, list_saved_reports, load_state, save_report_html, save_state
+
+# Attempt imports from persistence, or fall back to local handlers if not present
+try:
+    from persistence import delete_report_file, list_saved_reports, load_state, save_report_html, save_state
+except ImportError:
+    import json
+    def load_state():
+        if os.path.exists("app_state.json"):
+            try:
+                with open("app_state.json", "r") as f:
+                    return json.load(f)
+            except Exception:
+                return {}
+        return {}
+
+    def save_state(state):
+        data = {k: v for k, v in state.items() if not k.startswith("st_")}
+        with open("app_state.json", "w") as f:
+            json.dump(data, f, indent=2, default=str)
+
+    def save_report_html(report_type, html_content, title="Receipt"):
+        os.makedirs(f"archive/{report_type}", exist_ok=True)
+        filename = f"archive/{report_type}/{title}_{int(time.time())}.html"
+        with open(filename, "w", encoding="utf-8") as f:
+            f.write(html_content)
+        return filename
+
+    def list_saved_reports(report_type):
+        folder = f"archive/{report_type}"
+        if not os.path.exists(folder):
+            return []
+        from pathlib import Path
+        return list(Path(folder).glob("*.html"))
+
+    def delete_report_file(path):
+        if os.path.exists(path):
+            os.remove(path)
 
 # ═════════════════ CONFIGURATION ═════════════════
 APP_VERSION = "AILY OS v30000 — GREEN EMERALD CORE"
@@ -35,6 +72,9 @@ if "labor_records" not in st.session_state:
 
 if "payroll_expenses" not in st.session_state:
     st.session_state.payroll_expenses = []
+
+if "planner_tasks" not in st.session_state:
+    st.session_state.planner_tasks = []
 
 if "budget" not in st.session_state:
     st.session_state.budget = 0.0
@@ -70,28 +110,32 @@ def clear_all():
     st.session_state.records = []
     st.session_state.labor_records = []
     st.session_state.payroll_expenses = []
+    st.session_state.planner_tasks = []
     st.session_state.budget = 0.0
     st.session_state.remaining_money = 0.0
     st.session_state.view = "home"
     save_state(st.session_state)
 
-
 def persist_state():
     save_state(st.session_state)
 
 def add_tx(name, price, qty, delivery, ttype, sender):
-    if float(price) <= 0 or int(qty) <= 0:
+    p = float(price or 0.0)
+    q = int(qty or 0)
+    d = float(delivery or 0.0)
+
+    if p <= 0 or q <= 0:
         return False
 
-    amount = (float(price) * int(qty)) + float(delivery) if ttype == "material" else float(price)
+    amount = (p * q) + d if ttype == "material" else p
 
     st.session_state.records.append({
         "id": str(time.time()),
         "date": datetime.now().strftime("%b %d, %Y"),
         "name": name.upper(),
-        "price": float(price),
-        "qty": int(qty),
-        "delivery": float(delivery),
+        "price": p,
+        "qty": q,
+        "delivery": d,
         "amount": float(amount),
         "type": ttype,
         "sender": sender
@@ -120,136 +164,136 @@ def build_html_report(records, budget):
     else:
         balance_color = "#e57373" if remaining_balance < 0 else "#a5d6a7"
 
-    html = f"""
-    <html>
-    <head>
-        <style>
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-            body {{ font-family: 'Inter', sans-serif; background-color: #f0f4f0; margin: 0; padding: 20px; color: #333; }}
-            .receipt-container {{ max-width: 1000px; margin: auto; background: #fff; padding: 30px; border-radius: 4px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border-top: 10px solid #1b5e20; }}
-            .header {{ display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; }}
-            .company-info h1 {{ color: #1b5e20; margin: 0; font-size: 24px; letter-spacing: -1px; }}
-            .company-info p {{ margin: 4px 0; font-size: 12px; color: #666; }}
-            .receipt-meta {{ text-align: left; margin-top: 10px; }}
-            @media (min-width: 768px) {{ .receipt-meta {{ text-align: right; margin-top: 0; }} }}
-            .receipt-meta h2 {{ margin: 0; font-size: 16px; text-transform: uppercase; color: #1b5e20; }}
-            .receipt-meta p {{ margin: 4px 0; font-size: 12px; font-weight: bold; }}
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {{ font-family: 'Inter', sans-serif; background-color: #f0f4f0; margin: 0; padding: 20px; color: #333; }}
+        .receipt-container {{ max-width: 1000px; margin: auto; background: #fff; padding: 30px; border-radius: 4px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border-top: 10px solid #1b5e20; }}
+        .header {{ display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; }}
+        .company-info h1 {{ color: #1b5e20; margin: 0; font-size: 24px; letter-spacing: -1px; }}
+        .company-info p {{ margin: 4px 0; font-size: 12px; color: #666; }}
+        .receipt-meta {{ text-align: left; margin-top: 10px; }}
+        @media (min-width: 768px) {{ .receipt-meta {{ text-align: right; margin-top: 0; }} }}
+        .receipt-meta h2 {{ margin: 0; font-size: 16px; text-transform: uppercase; color: #1b5e20; }}
+        .receipt-meta p {{ margin: 4px 0; font-size: 12px; font-weight: bold; }}
 
-            table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px; }}
-            th {{ background-color: #1b5e20; color: #ffffff; text-align: left; padding: 10px; text-transform: uppercase; letter-spacing: 1px; }}
-            td {{ padding: 10px 8px; border-bottom: 1px solid #f0f0f0; }}
-            .qty-col, .desccol, .pricecol, .deliverycol, .totalcol {{ text-align: left; }}
-            .desccol {{ font-weight: 700; color: #1b5e20; }}
+        table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px; }}
+        th {{ background-color: #1b5e20; color: #ffffff; text-align: left; padding: 10px; text-transform: uppercase; letter-spacing: 1px; }}
+        td {{ padding: 10px 8px; border-bottom: 1px solid #f0f0f0; }}
+        .qty-col, .desccol, .pricecol, .deliverycol, .totalcol {{ text-align: left; }}
+        .desccol {{ font-weight: 700; color: #1b5e20; }}
 
-            .summary-container {{ display: flex; justify-content: flex-end; }}
-            .summary-table {{ width: 100%; }}
-            @media (min-width: 768px) {{ .summary-table {{ width: 420px; }} }}
-            .grand-total {{ background: #1b5e20; color: white; padding: 20px; border-radius: 4px; margin-top: 15px; }}
+        .summary-container {{ display: flex; justify-content: flex-end; }}
+        .summary-table {{ width: 100%; }}
+        @media (min-width: 768px) {{ .summary-table {{ width: 420px; }} }}
+        .grand-total {{ background: #1b5e20; color: white; padding: 20px; border-radius: 4px; margin-top: 15px; }}
 
-            .balance-info {{ font-size: 13px; line-height: 1.8; }}
-            .balance-row {{ display: flex; justify-content: space-between; }}
-            .material-row {{ font-size: 18px; font-weight: bold; }}
-            .final-balance-row {{ display: flex; justify-content: space-between; border-top: 1px dashed rgba(255,255,255,0.4); margin-top: 8px; padding-top: 8px; font-size: 18px; font-weight: bold; }}
+        .balance-info {{ font-size: 13px; line-height: 1.8; }}
+        .balance-row {{ display: flex; justify-content: space-between; }}
+        .material-row {{ font-size: 18px; font-weight: bold; }}
+        .final-balance-row {{ display: flex; justify-content: space-between; border-top: 1px dashed rgba(255,255,255,0.4); margin-top: 8px; padding-top: 8px; font-size: 18px; font-weight: bold; }}
 
-            .footer {{ margin-top: 30px; text-align: center; font-size: 9px; color: #aaa; text-transform: uppercase; letter-spacing: 1px; }}
-        </style>
-    </head>
-    <body>
-        <div class="receipt-container">
-            <div class="header">
-                <div class="company-info">
-                    <h1>AILYN HOUSE PROJECT</h1>
-                    <p>Official Material & Expense Inventory</p>
-                    <p>Management System {APP_VERSION}</p>
-                    <p>Backup Receiver: <i>{RECEIVER_AILYN}</i></p>
-                </div>
-                <div class="receipt-meta">
-                    <h2>Inventory Receipt</h2>
-                    <p>Date: {date_now}</p>
-                </div>
+        .footer {{ margin-top: 30px; text-align: center; font-size: 9px; color: #aaa; text-transform: uppercase; letter-spacing: 1px; }}
+    </style>
+</head>
+<body>
+    <div class="receipt-container">
+        <div class="header">
+            <div class="company-info">
+                <h1>AILYN HOUSE PROJECT</h1>
+                <p>Official Material & Expense Inventory</p>
+                <p>Management System {APP_VERSION}</p>
+                <p>Backup Receiver: <i>{RECEIVER_AILYN}</i></p>
             </div>
+            <div class="receipt-meta">
+                <h2>Inventory Receipt</h2>
+                <p>Date: {date_now}</p>
+            </div>
+        </div>
 
-            <table>
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th class="qty-col">Qty</th>
-                        <th class="desccol">Description</th>
-                        <th class="pricecol">Unit Price</th>
-                        <th class="deliverycol">Delivery</th>
-                        <th class="totalcol">Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-    """
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th class="qty-col">Qty</th>
+                    <th class="desccol">Description</th>
+                    <th class="pricecol">Unit Price</th>
+                    <th class="deliverycol">Delivery</th>
+                    <th class="totalcol">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+"""
 
     for r in records:
         html += f"""
-                    <tr>
-                        <td>{r['date']}</td>
-                        <td class="qty-col">{r['qty']}</td>
-                        <td class="desccol">{r['name']}</td>
-                        <td class="pricecol">{float(r.get('price', r['amount'])):,.2f}</td>
-                        <td class="deliverycol">{float(r['delivery']):,.2f}</td>
-                        <td class="totalcol">PHP {float(r['amount']):,.2f}</td>
-                    </tr>
-        """
+                <tr>
+                    <td>{r['date']}</td>
+                    <td class="qty-col">{r['qty']}</td>
+                    <td class="desccol">{r['name']}</td>
+                    <td class="pricecol">{float(r.get('price', r['amount'])):,.2f}</td>
+                    <td class="deliverycol">{float(r['delivery']):,.2f}</td>
+                    <td class="totalcol">PHP {float(r['amount']):,.2f}</td>
+                </tr>
+"""
 
     html += f"""
-                </tbody>
-            </table>
+            </tbody>
+        </table>
 
-            <div class="summary-container">
-                <div class="summary-table">
-                    <div class="grand-total">
-                        <div class="balance-info">
-                            <div class="balance-row material-row">
-                                <span>Material/Expense Total:</span>
-                                <span>PHP {material_total + expense_total:,.2f}</span>
-                            </div>
-                            <div class="balance-row" style="font-size: 13px;">
-                                <span>Excess Money Total:</span>
-                                <span>PHP {excess_total:,.2f}</span>
-                            </div>
-                            <div class="balance-row" style="font-size: 13px;">
-                                <span>Total Budget:</span>
-                                <span>PHP {budget:,.2f}</span>
-                            </div>
-    """
+        <div class="summary-container">
+            <div class="summary-table">
+                <div class="grand-total">
+                    <div class="balance-info">
+                        <div class="balance-row material-row">
+                            <span>Material/Expense Total:</span>
+                            <span>PHP {material_total + expense_total:,.2f}</span>
+                        </div>
+                        <div class="balance-row" style="font-size: 13px;">
+                            <span>Excess Money Total:</span>
+                            <span>PHP {excess_total:,.2f}</span>
+                        </div>
+                        <div class="balance-row" style="font-size: 13px;">
+                            <span>Total Budget:</span>
+                            <span>PHP {budget:,.2f}</span>
+                        </div>
+"""
 
     if sobra_amount > 0:
         html += f"""
-                            <div class="final-balance-row">
-                                <span>EXCESS</span>
-                                <span style="color: #a5d6a7;">PHP {sobra_amount:,.2f}</span>
-                            </div>
-        """
+                        <div class="final-balance-row">
+                            <span>EXCESS</span>
+                            <span style="color: #a5d6a7;">PHP {sobra_amount:,.2f}</span>
+                        </div>
+"""
 
     if kulang_amount > 0:
         html += f"""
-                            <div class="final-balance-row">
-                                <span>SHORTAGE</span>
-                                <span style="color: #e57373;">PHP {kulang_amount:,.2f}</span>
-                            </div>
-        """
+                        <div class="final-balance-row">
+                            <span>SHORTAGE</span>
+                            <span style="color: #e57373;">PHP {kulang_amount:,.2f}</span>
+                        </div>
+"""
 
     html += f"""
-                            <div class="final-balance-row">
-                                <span>FINAL BALANCE</span>
-                                <span style="color: {balance_color};">PHP {remaining_balance:,.2f}</span>
-                            </div>
+                        <div class="final-balance-row">
+                            <span>FINAL BALANCE</span>
+                            <span style="color: {balance_color};">PHP {remaining_balance:,.2f}</span>
                         </div>
                     </div>
                 </div>
             </div>
-
-            <div class="footer">
-                This document was electronically generated and is valid without signature.
-            </div>
         </div>
-    </body>
-    </html>
-    """
+
+        <div class="footer">
+            This document was electronically generated and is valid without signature.
+        </div>
+    </div>
+</body>
+</html>
+"""
     return html
 
 # ═════════════════ REPORT MANAGER (PAYROLL) ═════════════════
@@ -259,134 +303,211 @@ def generate_payroll_html(labor_records, expense_records, remaining_money=0.0):
     total_expenses = sum(e['price'] for e in expense_records)
     
     sub_total = total_labor + total_expenses
-    grand_total = sub_total - remaining_money
+    grand_total = sub_total - (remaining_money or 0.0)
 
-    html = f"""
-    <html>
-    <body style="font-family: 'Segoe UI', sans-serif; background-color: #f4f7f6; padding: 40px;">
-    <div style="max-width: 900px; margin: auto; background: white; border-top: 10px solid #1b5e20; padding: 40px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+    html = f"""<!DOCTYPE html>
+<html>
+<body style="font-family: 'Segoe UI', sans-serif; background-color: #f4f7f6; padding: 40px;">
+<div style="max-width: 900px; margin: auto; background: white; border-top: 10px solid #1b5e20; padding: 40px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
 
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
-            <tr>
-                <td>
-                    <h1 style="color: #1b5e20; margin: 0; text-transform: uppercase;">Ailyn Construction</h1>
-                    <p style="color: #555; margin: 5px 0 0 0;">Official Labor & Payroll Inventory</p>
-                    <p style="color: #777; font-size: 14px; margin: 0;">Management System v3.6 Enterprise</p>
-                </td>
-                <td style="text-align: right;">
-                    <h3 style="color: #1b5e20; margin: 0;">INVENTORY RECEIPT</h3>
-                    <p style="color: #555; font-size: 14px; margin: 5px 0 0 0;">Date: {date_str}</p>
-                    <p style="color: #777; font-size: 12px; margin: 5px 0 0 0;">Account: {RECEIVER_EMAIL}</p>
-                </td>
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+        <tr>
+            <td>
+                <h1 style="color: #1b5e20; margin: 0; text-transform: uppercase;">Ailyn Construction</h1>
+                <p style="color: #555; margin: 5px 0 0 0;">Official Labor & Payroll Inventory</p>
+                <p style="color: #777; font-size: 14px; margin: 0;">Management System v3.6 Enterprise</p>
+            </td>
+            <td style="text-align: right;">
+                <h3 style="color: #1b5e20; margin: 0;">INVENTORY RECEIPT</h3>
+                <p style="color: #555; font-size: 14px; margin: 5px 0 0 0;">Date: {date_str}</p>
+                <p style="color: #777; font-size: 12px; margin: 5px 0 0 0;">Account: {RECEIVER_EMAIL}</p>
+            </td>
+        </tr>
+    </table>
+
+    <div style="border-bottom: 2px solid #eee; margin-bottom: 30px;"></div>
+
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+        <thead>
+            <tr style="background-color: #1b5e20; color: white; text-transform: uppercase; font-size: 14px;">
+                <th style="padding: 12px; text-align: left;">Worker Name</th>
+                <th style="padding: 12px; text-align: center;">Days</th>
+                <th style="padding: 12px; text-align: right;">Rate</th>
+                <th style="padding: 12px; text-align: right;">C.A.</th>
+                <th style="padding: 12px; text-align: right;">Net Pay</th>
             </tr>
-        </table>
-
-        <div style="border-bottom: 2px solid #eee; margin-bottom: 30px;"></div>
-
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
-            <thead>
-                <tr style="background-color: #1b5e20; color: white; text-transform: uppercase; font-size: 14px;">
-                    <th style="padding: 12px; text-align: left;">Worker Name</th>
-                    <th style="padding: 12px; text-align: center;">Days</th>
-                    <th style="padding: 12px; text-align: right;">Rate</th>
-                    <th style="padding: 12px; text-align: right;">C.A.</th>
-                    <th style="padding: 12px; text-align: right;">Net Pay</th>
-                </tr>
-            </thead>
-            <tbody>
-    """
+        </thead>
+        <tbody>
+"""
 
     for r in labor_records:
         html += f"""
-                <tr>
-                    <td style="padding: 12px; border-bottom: 1px solid #ddd; font-weight: bold;">{r['name']}</td>
-                    <td style="padding: 12px; border-bottom: 1px solid #ddd; text-align: center;">{r['days']}</td>
-                    <td style="padding: 12px; border-bottom: 1px solid #ddd; text-align: right;">{r['rate']:,.2f}</td>
-                    <td style="padding: 12px; border-bottom: 1px solid #ddd; text-align: right; color: #d32f2f;">({r['ca']:,.2f})</td>
-                    <td style="padding: 12px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold; color: #1b5e20;">{r['net']:,.2f}</td>
-                </tr>
-        """
+            <tr>
+                <td style="padding: 12px; border-bottom: 1px solid #ddd; font-weight: bold;">{r['name']}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #ddd; text-align: center;">{r['days']}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #ddd; text-align: right;">{r['rate']:,.2f}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #ddd; text-align: right; color: #d32f2f;">({r['ca']:,.2f})</td>
+                <td style="padding: 12px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold; color: #1b5e20;">{r['net']:,.2f}</td>
+            </tr>
+"""
 
     if expense_records:
         html += """
-                <tr>
-                    <td colspan="5" style="padding: 12px 0;"></td>
-                </tr>
-                <tr style="background-color: #388e3c; color: white; text-transform: uppercase; font-size: 14px;">
-                    <th colspan="4" style="padding: 10px; text-align: left;">Expense Description</th>
-                    <th style="padding: 10px; text-align: right;">Amount</th>
-                </tr>
-        """
+            <tr>
+                <td colspan="5" style="padding: 12px 0;"></td>
+            </tr>
+            <tr style="background-color: #388e3c; color: white; text-transform: uppercase; font-size: 14px;">
+                <th colspan="4" style="padding: 10px; text-align: left;">Expense Description</th>
+                <th style="padding: 10px; text-align: right;">Amount</th>
+            </tr>
+"""
         for e in expense_records:
             html += f"""
-                <tr>
-                    <td colspan="4" style="padding: 10px; border-bottom: 1px solid #ddd;">{e['item']}</td>
-                    <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold;">{e['price']:,.2f}</td>
-                </tr>
-            """
-
-    html += f"""
-            </tbody>
-        </table>
-
-        <table style="width: 100%; border-collapse: collapse; margin-top: 20px; margin-bottom: 30px;">
-            <tr style="border-top: 2px solid #bbb;">
-                <td style="padding: 12px; font-weight: bold; text-align: right; font-size: 15px;">Subtotal Expenses:</td>
-                <td style="padding: 12px; width: 180px; text-align: right; font-weight: bold; font-size: 15px; color: #333;">PHP {sub_total:,.2f}</td>
-            </tr>
-    """
-
-    if remaining_money > 0:
-        html += f"""
-            <tr style="border-bottom: 2px solid #bbb;">
-                <td style="padding: 12px; font-weight: bold; text-align: right; color: #d32f2f; font-size: 15px;">Remaining/Leftover Money:</td>
-                <td style="padding: 12px; width: 180px; text-align: right; font-weight: bold; color: #d32f2f; font-size: 15px;">-PHP {remaining_money:,.2f}</td>
-            </tr>
-        """
-
-    html += f"""
-        </table>
-
-        <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
             <tr>
-                <td></td>
-                <td style="width: 350px; background: #1b5e20; color: white; padding: 20px; border-radius: 8px; text-align: right;">
-                    <span style="font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Final Output Amount</span><br>
-                    <span style="font-size: 32px; font-weight: bold; margin-top: 5px; display: inline-block;">PHP {grand_total:,.2f}</span>
-                </td>
+                <td colspan="4" style="padding: 10px; border-bottom: 1px solid #ddd;">{e['item']}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold;">{e['price']:,.2f}</td>
             </tr>
-        </table>
+"""
 
-        <div style="text-align: center; margin-top: 60px; border-top: 1px solid #eee; padding-top: 20px;">
-            <p style="color: #999; font-size: 11px; letter-spacing: 1px; text-transform: uppercase;">
-                THIS DOCUMENT WAS ELECTRONICALLY GENERATED AND IS VALID WITHOUT SIGNATURE.
-            </p>
-        </div>
+    html += f"""
+        </tbody>
+    </table>
 
+    <table style="width: 100%; border-collapse: collapse; margin-top: 20px; margin-bottom: 30px;">
+        <tr style="border-top: 2px solid #bbb;">
+            <td style="padding: 12px; font-weight: bold; text-align: right; font-size: 15px;">Subtotal Expenses:</td>
+            <td style="padding: 12px; width: 180px; text-align: right; font-weight: bold; font-size: 15px; color: #333;">PHP {sub_total:,.2f}</td>
+        </tr>
+"""
+
+    if remaining_money and remaining_money > 0:
+        html += f"""
+        <tr style="border-bottom: 2px solid #bbb;">
+            <td style="padding: 12px; font-weight: bold; text-align: right; color: #d32f2f; font-size: 15px;">Remaining/Leftover Money:</td>
+            <td style="padding: 12px; width: 180px; text-align: right; font-weight: bold; color: #d32f2f; font-size: 15px;">-PHP {remaining_money:,.2f}</td>
+        </tr>
+"""
+
+    html += f"""
+    </table>
+
+    <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+        <tr>
+            <td></td>
+            <td style="width: 350px; background: #1b5e20; color: white; padding: 20px; border-radius: 8px; text-align: right;">
+                <span style="font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Final Output Amount</span><br>
+                <span style="font-size: 32px; font-weight: bold; margin-top: 5px; display: inline-block;">PHP {grand_total:,.2f}</span>
+            </td>
+        </tr>
+    </table>
+
+    <div style="text-align: center; margin-top: 60px; border-top: 1px solid #eee; padding-top: 20px;">
+        <p style="color: #999; font-size: 11px; letter-spacing: 1px; text-transform: uppercase;">
+            THIS DOCUMENT WAS ELECTRONICALLY GENERATED AND IS VALID WITHOUT SIGNATURE.
+        </p>
     </div>
-    </body>
-    </html>
-    """
+
+</div>
+</body>
+</html>
+"""
     return html, grand_total
 
-# ═════════════════ CSS & 3D GREEN INTERFACE ═════════════════
+# ═════════════════ PLANNER REPORT GENERATOR WITH PHOTO GALLERY ═════════════════
+def generate_planner_html(planner_tasks):
+    date_now = datetime.now().strftime("%B %d, %Y")
+    sorted_tasks = sorted(planner_tasks, key=lambda x: x.get('date_obj', ''))
+
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap');
+        body {{ font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f0f4f0; margin: 0; padding: 30px; color: #1e293b; }}
+        .receipt-card {{ max-width: 900px; margin: auto; background: #ffffff; border-radius: 12px; padding: 35px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border-top: 10px solid #1b5e20; }}
+        .header {{ border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-start; }}
+        .title h1 {{ color: #1b5e20; margin: 0; font-size: 24px; font-weight: 800; text-transform: uppercase; }}
+        .title p {{ color: #64748b; margin: 4px 0 0 0; font-size: 13px; font-weight: 600; }}
+        .meta {{ text-align: right; font-size: 12px; color: #475569; }}
+        .meta h3 {{ margin: 0; color: #1b5e20; font-size: 16px; text-transform: uppercase; }}
+        
+        .task-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 20px; }}
+        .task-card {{ background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 8px; border-left: 5px solid #22c55e; }}
+        .task-date {{ font-size: 12px; font-weight: 800; color: #1b5e20; text-transform: uppercase; letter-spacing: 0.5px; background: #dcfce7; padding: 4px 8px; border-radius: 6px; width: fit-content; }}
+        .task-name {{ font-size: 15px; font-weight: 700; color: #0f172a; margin: 4px 0; }}
+        .task-phase {{ font-size: 12px; color: #64748b; font-weight: 600; }}
+        .task-status {{ font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 20px; width: fit-content; text-transform: uppercase; letter-spacing: 0.5px; margin-top: auto; }}
+        .status-completed {{ background: #dcfce7; color: #15803d; }}
+        .status-inprogress {{ background: #fef3c7; color: #b45309; }}
+        .status-notstarted {{ background: #f1f5f9; color: #475569; }}
+
+        .photo-gallery {{ display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; border-top: 1px dashed #e2e8f0; padding-top: 10px; }}
+        .photo-img {{ width: 80px; height: 80px; object-fit: cover; border-radius: 6px; border: 1px solid #cbd5e1; }}
+
+        .footer {{ margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 15px; text-align: center; font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }}
+    </style>
+</head>
+<body>
+    <div class="receipt-card">
+        <div class="header">
+            <div class="title">
+                <h1>📅 WORK SCHEDULE & CALENDAR RECEIPT</h1>
+                <p>AILYN HOUSE PROJECT MANAGEMENT</p>
+            </div>
+            <div class="meta">
+                <h3>OFFICIAL SCHEDULE</h3>
+                <p><b>Generated:</b> {date_now}</p>
+            </div>
+        </div>
+
+        <div class="task-grid">
+"""
+    for t in sorted_tasks:
+        st_class = "status-completed" if t['status'] == "Completed" else "status-inprogress" if t['status'] == "In Progress" else "status-notstarted"
+        
+        photos_html = ""
+        if t.get("photos"):
+            photos_html = '<div class="photo-gallery">'
+            for p in t["photos"]:
+                photos_html += f'<img src="{p}" class="photo-img" />'
+            photos_html += '</div>'
+
+        html += f"""
+            <div class="task-card">
+                <div class="task-date">📅 {t.get('month', '')} {t.get('day', '')}, {t.get('year', '')}</div>
+                <div class="task-name">{t['name']}</div>
+                <div class="task-phase">🔨 Phase: {t['phase']}</div>
+                <div class="task-status {st_class}">{t['status']}</div>
+                {photos_html}
+            </div>
+"""
+
+    html += """
+        </div>
+
+        <div class="footer">
+            Official Construction Task Schedule Document • Electronically Generated
+        </div>
+    </div>
+</body>
+</html>
+"""
+    return html
+
+# ═════════════════ CSS & REFINED INTERFACE ═════════════════
 st.markdown("""
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap');
+
 :root {
     --bg-deep: #07110b;
-    --bg-panel: rgba(8, 24, 15, 0.78);
-    --bg-panel-2: rgba(13, 39, 24, 0.9);
-    --line: rgba(132, 255, 179, 0.16);
     --text-main: #f4fff7;
-    --text-soft: #acebb3;
     --accent: #4ade80;
-    --accent-strong: #22c55e;
-    --accent-warm: #fbbf24;
 }
 
 @media (max-width: 768px) {
     .block-container {
-        padding: 12px !important;
+        padding: 16px 12px !important;
     }
     h1, h2, h3 {
         font-size: 18px !important;
@@ -411,75 +532,158 @@ st.markdown("""
     background-size: cover;
     background-position: center;
     min-height: 100vh;
+    font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
 .block-container {
-    background: rgba(20, 50, 35, 0.68) !important;
-    backdrop-filter: blur(18px);
-    border-radius: 24px;
-    border: 1px solid rgba(135, 255, 180, 0.18);
-    box-shadow: 0 18px 54px rgba(0, 0, 0, 0.38);
-    padding: 24px;
+    background: rgba(12, 32, 22, 0.74) !important;
+    backdrop-filter: blur(22px);
+    border-radius: 28px;
+    border: 1px solid rgba(132, 255, 179, 0.18);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+    padding: 36px 24px 24px 24px !important;
+    margin-top: 15px !important;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.block-container:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 22px 64px rgba(72, 239, 127, 0.16);
+section[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, rgba(12, 45, 28, 0.94) 0%, rgba(6, 26, 16, 0.96) 100%) !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-right: 1px solid rgba(132, 255, 179, 0.22);
+    box-shadow: 6px 0 30px rgba(0, 0, 0, 0.35);
 }
 
-section[data-testid="stSidebar"] {
-    background: rgba(6, 19, 13, 0.96) !important;
+section[data-testid="stSidebar"] * {
+    color: #e6f9ed !important;
+}
+
+.headbar-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 auto 28px auto;
+    width: 100%;
+}
+
+.headbar-card {
+    background: linear-gradient(135deg, rgba(16, 54, 34, 0.95), rgba(8, 30, 18, 0.95));
     backdrop-filter: blur(20px);
-    border-right: 1px solid rgba(132, 255, 179, 0.14);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(132, 255, 179, 0.35);
+    border-radius: 20px;
+    padding: 16px 36px;
+    box-shadow:
+        0 14px 36px rgba(0, 0, 0, 0.4),
+        inset 0 1px 1px rgba(255, 255, 255, 0.25);
+    text-align: center;
+    max-width: 650px;
+    margin: 0 auto;
+    transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.headbar-card:hover {
+    transform: translateY(-2px) scale(1.01);
+    border-color: rgba(74, 222, 128, 0.65);
+    box-shadow:
+        0 18px 45px rgba(34, 197, 94, 0.22),
+        0 0 20px rgba(132, 255, 179, 0.25);
+}
+
+.headbar-title {
+    font-size: 20px !important;
+    font-weight: 800;
+    color: #f0fff4 !important;
+    margin: 0;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.headbar-subtitle {
+    font-size: 11px;
+    color: #a7f3d0;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-top: 5px;
+    font-weight: 700;
 }
 
 button, .stDownloadButton > button {
-    background: linear-gradient(145deg, rgba(11, 78, 47, 0.96), rgba(22, 122, 68, 0.92));
+    background: linear-gradient(135deg, rgba(22, 78, 48, 0.9), rgba(12, 48, 28, 0.85)) !important;
     color: #ffffff !important;
-    border-radius: 16px !important;
-    transition: all 0.16s ease-in-out;
-    border: 1px solid rgba(135, 255, 180, 0.28);
+    border-radius: 18px !important;
+    border: 1px solid rgba(132, 255, 179, 0.3) !important;
     font-weight: 700;
     min-height: 46px;
-    box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.16),
-        0 8px 18px rgba(0, 0, 0, 0.22),
-        0 2px 8px rgba(34, 197, 94, 0.18);
-    backdrop-filter: blur(10px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.24);
+    backdrop-filter: blur(12px);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 button:hover, .stDownloadButton > button:hover {
-    transform: translateY(-2px);
-    box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.2),
-        0 12px 24px rgba(72, 239, 127, 0.24),
-        0 4px 12px rgba(0, 0, 0, 0.24);
-    border-color: rgba(163, 230, 53, 0.7);
-    background: linear-gradient(145deg, rgba(22, 122, 68, 0.98), rgba(20, 164, 77, 0.96));
+    transform: translateY(-3px) scale(1.01);
+    background: linear-gradient(135deg, rgba(34, 122, 72, 0.95), rgba(20, 88, 50, 0.9)) !important;
+    border-color: rgba(132, 255, 179, 0.7) !important;
+    box-shadow: 0 12px 28px rgba(74, 222, 128, 0.25), 0 0 14px rgba(132, 255, 179, 0.35) !important;
 }
 
 button:active, .stDownloadButton > button:active {
-    transform: scale(0.98);
-    box-shadow: inset 0 2px 8px rgba(0,0,0,0.24);
+    transform: translateY(-1px) scale(0.98);
+    box-shadow: 0 4px 12px rgba(74, 222, 128, 0.3);
+}
+
+[data-testid="stMetric"] {
+    background: linear-gradient(145deg, rgba(14, 46, 28, 0.88), rgba(8, 28, 17, 0.85));
+    border-radius: 22px;
+    padding: 16px 20px;
+    border: 1px solid rgba(132, 255, 179, 0.22);
+    margin-bottom: 14px;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(12px);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    cursor: pointer;
+}
+
+[data-testid="stMetric"]:hover, [data-testid="stMetric"]:active {
+    transform: translateY(-6px) scale(1.02);
+    border-color: rgba(132, 255, 179, 0.65);
+    box-shadow:
+        0 14px 32px rgba(34, 197, 94, 0.25),
+        0 0 20px rgba(74, 222, 128, 0.35);
+    background: linear-gradient(145deg, rgba(20, 62, 38, 0.94), rgba(10, 36, 22, 0.92));
+}
+
+[data-testid="stMetric"] label {
+    color: #a7f3d0 !important;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
+
+[data-testid="stMetric"] div[data-testid="stMetricValue"] {
+    color: #ffffff !important;
+    font-weight: 800;
 }
 
 input, textarea, select {
     background: rgba(255, 255, 255, 0.1) !important;
-    border: 1px solid rgba(135, 255, 180, 0.24) !important;
+    border: 1px solid rgba(132, 255, 179, 0.25) !important;
     color: #f8fff9 !important;
-    border-radius: 12px !important;
+    border-radius: 14px !important;
     backdrop-filter: blur(10px);
     font-size: 15px !important;
     min-height: 44px;
     padding: 8px 12px;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 input:focus, textarea:focus, select:focus {
-    border-color: #22c55e !important;
-    box-shadow: 0 0 10px rgba(34, 197, 94, 0.28);
-    transform: translateY(-1px);
+    border-color: #4ade80 !important;
+    box-shadow: 0 0 12px rgba(74, 222, 128, 0.3);
 }
 
 h1, h2, h3 {
@@ -488,115 +692,117 @@ h1, h2, h3 {
     letter-spacing: 0.4px;
 }
 
-[data-testid="stMetric"] {
-    background: linear-gradient(145deg, rgba(14, 44, 24, 0.95), rgba(8, 32, 18, 0.9));
-    border-radius: 18px;
-    padding: 12px;
-    border: 1px solid rgba(132, 255, 179, 0.16);
-    margin-bottom: 12px;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
-    transition: transform 0.2s ease, border-color 0.2s ease;
-}
-
-[data-testid="stMetric"]:hover {
-    transform: translateY(-2px);
-    border-color: rgba(132, 255, 179, 0.42);
-}
-
-[data-testid="stMetric"] label {
-    color: #b8f5c1 !important;
-    font-weight: 600;
-}
-
-[data-testid="stMetric"] div[data-testid="stMetricValue"] {
-    color: #ffffff !important;
-}
-
-.stAlert, .stSuccess, .stWarning, .stInfo {
-    border-radius: 12px !important;
-    border: 1px solid rgba(132, 255, 179, 0.16) !important;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.16) !important;
-}
-
-.hero-card {
-    background: linear-gradient(135deg, rgba(12, 34, 21, 0.9), rgba(5, 20, 12, 0.8));
-    border: 1px solid rgba(135, 255, 180, 0.18);
-    border-radius: 24px;
-    padding: 22px 24px;
-    margin-bottom: 18px;
-    box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.08),
-        0 16px 44px rgba(0, 0, 0, 0.28);
-    backdrop-filter: blur(12px);
-}
-
-.hero-badge {
-    display: inline-block;
-    padding: 6px 10px;
-    border-radius: 999px;
-    background: rgba(74, 222, 128, 0.14);
-    color: #b7f5c2;
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-bottom: 10px;
-}
-
-.section-pill {
-    display: inline-block;
-    padding: 6px 10px;
-    border-radius: 999px;
-    background: rgba(251, 191, 36, 0.12);
-    color: #fde68a;
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-bottom: 10px;
-}
-
 .sidebar-brand {
-    padding: 8px 10px 12px 10px;
-    border-radius: 16px;
-    background: linear-gradient(135deg, rgba(15, 41, 25, 0.96), rgba(7, 23, 14, 0.92));
-    border: 1px solid rgba(132, 255, 179, 0.16);
-    margin-bottom: 12px;
+    padding: 14px 16px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(132, 255, 179, 0.22);
+    margin-bottom: 16px;
+    backdrop-filter: blur(10px);
 }
 
 .sidebar-brand h3 {
     margin: 0 0 4px 0;
-    color: #ecfff1 !important;
-    font-size: 16px;
+    color: #ffffff !important;
+    font-size: 15px;
 }
 
 .sidebar-brand p {
     margin: 0;
-    color: #b8f5c1;
+    color: #a7f3d0;
     font-size: 12px;
 }
 
-.intro {
-    text-align: center;
-    color: #ffffff;
+/* CALENDAR CARD LIST STYLING */
+.cal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 18px;
+    margin-top: 15px;
 }
 
-.intro h1 {
-    font-size: 30px;
-    font-weight: 800;
-    color: #ecfff1;
-    margin: 0;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    font-family: 'Georgia', 'Times New Roman', serif;
-    text-shadow: 0 2px 10px rgba(255,255,255,0.12);
+.cal-card {
+    background: linear-gradient(135deg, rgba(16, 45, 28, 0.9), rgba(8, 28, 17, 0.9));
+    border: 1px solid rgba(132, 255, 179, 0.25);
+    border-radius: 18px;
+    padding: 18px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    backdrop-filter: blur(12px);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: all 0.3s ease;
 }
+
+.cal-card:hover {
+    border-color: rgba(74, 222, 128, 0.6);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 30px rgba(34, 197, 94, 0.2);
+}
+
+.cal-date-badge {
+    background: rgba(74, 222, 128, 0.15);
+    color: #4ade80;
+    border: 1px solid rgba(74, 222, 128, 0.4);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 800;
+    width: fit-content;
+    letter-spacing: 0.5px;
+}
+
+.cal-task-title {
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 700;
+    margin: 2px 0;
+}
+
+.cal-phase {
+    color: #a7f3d0;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.cal-status-tag {
+    font-size: 11px;
+    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: 12px;
+    width: fit-content;
+    text-transform: uppercase;
+}
+
+.badge-notstarted { background: rgba(255, 255, 255, 0.1); color: #cbd5e1; }
+.badge-inprogress { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+.badge-completed { background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.4); }
+
+.card-photos {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+}
+
+.card-photo-thumb {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    object-fit: cover;
+    border: 1px solid rgba(132, 255, 179, 0.4);
+}
+
 </style>
 """, unsafe_allow_html=True)
 
+# 👑 CENTRALIZED & ALIGNED HEADBAR
 st.markdown("""
-<div class="hero-card intro">
-    <h1>🏗️ AILYN HOUSE PROJECT & PAYROLL</h1>
+<div class="headbar-container">
+    <div class="headbar-card">
+        <div class="headbar-title">🏗️ AILYN HOUSE PROJECT & PAYROLL</div>
+        <div class="headbar-subtitle">Management Core System</div>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -604,17 +810,20 @@ st.markdown("""
 with st.sidebar:
     st.markdown("""
     <div class="sidebar-brand">
-        <h3>📱 AILY MOBILE CONTROL</h3>
-        <p>Construction • Payroll • Receipts</p>
+        <h3>📱 AILY CONTROL HUB</h3>
+        <p>Construction • Payroll • Planner</p>
     </div>
     """, unsafe_allow_html=True)
     
-    budget_input = st.number_input("Set Project Budget", min_value=0.0, key="budget_input_sidebar", value=st.session_state.budget)
+    budget_input = st.number_input("Set Project Budget", min_value=0.0, key="budget_input_sidebar", value=None, placeholder="Enter budget...")
     if st.button("APPLY BUDGET", use_container_width=True):
-        st.session_state.budget = float(budget_input)
-        persist_state()
-        st.success("Budget applied!")
-        st.rerun()
+        if budget_input is not None:
+            st.session_state.budget = float(budget_input)
+            persist_state()
+            st.success("Budget applied!")
+            st.rerun()
+        else:
+            st.warning("Please enter a budget amount.")
         
     st.caption(f"{datetime.now().strftime('%I:%M %p | %b %d')}")
     st.divider()
@@ -622,7 +831,17 @@ with st.sidebar:
     st.subheader("🏠 Navigation")
     if st.button("🏠 Project Summary / Home", use_container_width=True):
         set_view("home")
-        
+
+    st.markdown("---")
+    st.subheader("📅 Construction Planner")
+    col_p1, col_p2 = st.columns(2)
+    with col_p1:
+        if st.button("📥 Input Task", use_container_width=True):
+            set_view("planner_input")
+    with col_p2:
+        if st.button("📅 Schedule", use_container_width=True):
+            set_view("planner_output")
+
     st.markdown("---")
     st.subheader("🧱 Construction Ledger")
     if st.button("➕ Add Material", use_container_width=True):
@@ -631,7 +850,7 @@ with st.sidebar:
         set_view("expense")
     if st.button("💰 Add Excess Money", use_container_width=True):
         set_view("excess")
-    if st.button("📋 View Project Ledger", use_container_width=True):
+    if st.button("📋 View Construction Ledger", use_container_width=True):
         set_view("ledger")
     if st.button("📤 Export Construction Report", use_container_width=True):
         set_view("export")
@@ -662,7 +881,6 @@ view = st.session_state.view
 
 # 🏠 HOME
 if view == "home":
-    st.markdown("<div class='section-pill'>Live overview</div>", unsafe_allow_html=True)
     st.subheader("📊 QUICK STATS")
     
     col1, col2, col3 = st.columns(3)
@@ -685,67 +903,216 @@ if view == "home":
             📅 {r['date']}
             """)
 
+# 📥 PLANNER INPUT (SIDEBAR SUB-FEATURE)
+elif view == "planner_input":
+    st.subheader("📥 PLANNER INPUT — ADD NEW WORK TASK")
+    st.caption("Select date details, work description, and optional photo proofs. Saved permanently to device state.")
+
+    with st.form(key="planner_input_form", clear_on_submit=True):
+        selected_date = st.date_input("Select Day, Month, and Year", value=datetime.now())
+        work_description = st.text_area("Work Description / Task Details", placeholder="Describe construction work...")
+        phase = st.selectbox("Construction Phase", ["Site Prep", "Foundation", "Framing & Masonry", "Roofing", "Plumbing & Electrical", "Finishing", "Inspection"])
+        uploaded_files = st.file_uploader("Upload Work Proof Photos (Optional)", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+        
+        submitted = st.form_submit_button("💾 SAVE TASK TO PERMANENT STORAGE")
+
+    if submitted:
+        if work_description.strip():
+            photos_base64 = []
+            if uploaded_files:
+                for file in uploaded_files:
+                    bytes_data = file.read()
+                    b64_str = base64.b64encode(bytes_data).decode('utf-8')
+                    mime_type = file.type or "image/png"
+                    photos_base64.append(f"data:{mime_type};base64,{b64_str}")
+
+            st.session_state.planner_tasks.append({
+                "id": str(time.time()),
+                "day": selected_date.strftime("%d"),
+                "month": selected_date.strftime("%B"),
+                "year": selected_date.strftime("%Y"),
+                "date_obj": selected_date.strftime("%Y-%m-%d"),
+                "name": work_description.upper(),
+                "phase": phase,
+                "status": "Not Started",
+                "photos": photos_base64
+            })
+            persist_state()
+            st.success("Task & photos permanently saved!")
+            st.rerun()
+        else:
+            st.warning("Please fill in the work description.")
+
+    st.divider()
+    if st.button("🏠 RETURN TO HOME", use_container_width=True):
+        set_view("home")
+
+# 📅 PLANNER OUTPUT (CALENDAR VIEW & DOWNLOAD)
+elif view == "planner_output":
+    st.subheader("📅 PLANNER OUTPUT — WORK SCHEDULE CALENDAR")
+    st.caption("Chronological list of all work scheduled.")
+
+    tasks = st.session_state.planner_tasks
+
+    if not tasks:
+        st.info("No work scheduled yet. Use 'Input Task' in the sidebar to add entries.")
+    else:
+        sorted_tasks = sorted(tasks, key=lambda x: x.get('date_obj', ''))
+
+        # Visual Calendar Grid Cards
+        cards_html = '<div class="cal-grid">'
+        for t in sorted_tasks:
+            badge_class = "badge-completed" if t['status'] == "Completed" else "badge-inprogress" if t['status'] == "In Progress" else "badge-notstarted"
+            
+            photos_thumbs = ""
+            if t.get("photos"):
+                photos_thumbs = '<div class="card-photos">'
+                for p in t["photos"]:
+                    photos_thumbs += f'<img src="{p}" class="card-photo-thumb" />'
+                photos_thumbs += '</div>'
+
+            cards_html += f'''
+            <div class="cal-card">
+                <div class="cal-date-badge">📅 {t.get("month", "")} {t.get("day", "")}, {t.get("year", "")}</div>
+                <div class="cal-task-title">{t["name"]}</div>
+                <div class="cal-phase">🔨 {t["phase"]}</div>
+                <div class="cal-status-tag {badge_class}">{t["status"]}</div>
+                {photos_thumbs}
+            </div>
+            '''
+        cards_html += '</div>'
+        
+        st.markdown(cards_html, unsafe_allow_html=True)
+        st.markdown("---")
+
+        st.subheader("⚙️ Task Management & Photo Inspector")
+        for t in list(sorted_tasks):
+            with st.expander(f"📅 {t.get('month')} {t.get('day')}, {t.get('year')} — {t['name']} ({t['status']})", expanded=False):
+                col1, col2 = st.columns([2, 1])
+                with col1:
+                    new_status = st.selectbox(
+                        "Update Status", 
+                        ["Not Started", "In Progress", "Completed"], 
+                        index=["Not Started", "In Progress", "Completed"].index(t["status"]), 
+                        key=f"st_{t['id']}"
+                    )
+                    if new_status != t["status"]:
+                        t["status"] = new_status
+                        persist_state()
+                        st.rerun()
+
+                with col2:
+                    if st.button("❌ Delete Task", key=f"del_{t['id']}", use_container_width=True):
+                        st.session_state.planner_tasks = [x for x in st.session_state.planner_tasks if x["id"] != t["id"]]
+                        persist_state()
+                        st.rerun()
+
+                st.markdown("#### 📷 Work Gallery for this Day")
+                if t.get("photos"):
+                    img_cols = st.columns(4)
+                    for idx, photo_b64 in enumerate(list(t["photos"])):
+                        with img_cols[idx % 4]:
+                            st.image(photo_b64, use_container_width=True)
+                            if st.button("🗑️ Remove Photo", key=f"del_img_{t['id']}_{idx}", use_container_width=True):
+                                t["photos"].pop(idx)
+                                persist_state()
+                                st.rerun()
+                else:
+                    st.info("No photo proof attached for this work day yet.")
+
+                st.markdown("##### ➕ Add More Photos")
+                with st.form(key=f"upload_form_{t['id']}", clear_on_submit=True):
+                    new_photos = st.file_uploader("Upload Additional Photos", type=["jpg", "jpeg", "png"], accept_multiple_files=True, key=f"up_{t['id']}")
+                    add_photos_btn = st.form_submit_button("⬆️ UPLOAD PHOTOS")
+                    
+                if add_photos_btn and new_photos:
+                    if "photos" not in t or t["photos"] is None:
+                        t["photos"] = []
+                    for f in new_photos:
+                        bytes_data = f.read()
+                        b64_str = base64.b64encode(bytes_data).decode('utf-8')
+                        mime_type = f.type or "image/png"
+                        t["photos"].append(f"data:{mime_type};base64,{b64_str}")
+                    persist_state()
+                    st.success("Photos added successfully!")
+                    st.rerun()
+
+        st.markdown("---")
+
+        html_report = generate_planner_html(sorted_tasks)
+        st.download_button(
+            label="⬇️ DOWNLOAD SCHEDULE RECEIPT WITH PHOTOS (.HTML)",
+            data=html_report,
+            file_name="construction_schedule_receipt.html",
+            mime="text/html",
+            use_container_width=True
+        )
+
+    st.divider()
+    if st.button("🏠 RETURN TO HOME", use_container_width=True):
+        set_view("home")
+
 # ➕ MATERIAL
 elif view == "material":
-    st.subheader("➕ MATERIAL (LOOP MODE)")
+    st.subheader("➕ ADD MATERIAL")
 
     with st.form(key="material_form", clear_on_submit=True):
         name = st.text_input("Material Name")
-        price = st.number_input("Price", min_value=0.01, value=0.01)
-        qty = st.number_input("Qty", min_value=1, value=1)
-        delivery = st.number_input("Delivery", min_value=0.0, value=0.0)
+        price = st.number_input("Price", min_value=0.01, value=None, placeholder="0.00")
+        qty = st.number_input("Qty", min_value=1, value=None, placeholder="1")
+        delivery = st.number_input("Delivery", min_value=0.0, value=None, placeholder="0.00")
         sender = st.selectbox("Sender", ["Garr", "Aily"])
         
         submitted = st.form_submit_button(label="SAVE MATERIAL")
 
     if submitted:
-        ok = add_tx(name, price, qty, delivery, "material", sender)
+        ok = add_tx(name, price, qty, delivery or 0.0, "material", sender)
         if ok:
             st.success("Saved! Ready for next order.")
             st.rerun()
         else:
-            st.warning("Invalid data, please check amounts.")
+            st.warning("Invalid data, please fill out Price and Qty.")
 
     st.divider()
-    if st.button("🏁 FINISH LOOP", use_container_width=True):
+    if st.button("🏠 RETURN TO HOME", use_container_width=True):
         set_view("home")
 
 # 📝 EXPENSE
 elif view == "expense":
-    st.subheader("📝 EXPENSE (LOOP MODE)")
+    st.subheader("📝 ADD CONSTRUCTION EXPENSE")
 
     with st.form(key="expense_form", clear_on_submit=True):
         name = st.text_input("Expense Name")
-        amount = st.number_input("Amount", min_value=0.01, value=0.01)
+        amount = st.number_input("Amount", min_value=0.01, value=None, placeholder="0.00")
         sender = st.selectbox("Sender", ["Garr", "Aily"])
         
         submitted = st.form_submit_button(label="SAVE EXPENSE")
 
     if submitted:
-        if amount > 0:
+        if amount and amount > 0:
             add_tx(name, amount, 1, 0, "expense", sender)
             st.success("Expense Added → Ledger Updated")
             st.rerun()
         else:
-            st.warning("Amount must be greater than zero.")
+            st.warning("Please enter an amount greater than zero.")
 
     st.divider()
-    if st.button("🏁 FINISH LOOP", use_container_width=True):
+    if st.button("🏠 RETURN TO HOME", use_container_width=True):
         set_view("home")
 
 # 💰 EXCESS
 elif view == "excess":
-    st.subheader("💰 EXCESS (LOOP MODE)")
+    st.subheader("💰 ADD EXCESS MONEY")
 
     with st.form(key="excess_form", clear_on_submit=True):
         name = st.text_input("Reason")
-        amount = st.number_input("Amount", min_value=0.01, value=0.01)
+        amount = st.number_input("Amount", min_value=0.01, value=None, placeholder="0.00")
         sender = st.selectbox("Sender", ["Garr", "Aily"])
         
         submitted = st.form_submit_button(label="ADD EXCESS")
 
     if submitted:
-        if amount > 0:
+        if amount and amount > 0:
             st.session_state.records.append({
                 "id": str(time.time()),
                 "date": datetime.now().strftime("%b %d, %Y"),
@@ -764,12 +1131,12 @@ elif view == "excess":
             st.warning("Please enter a valid amount.")
 
     st.divider()
-    if st.button("🏁 FINISH LOOP", use_container_width=True):
+    if st.button("🏠 RETURN TO HOME", use_container_width=True):
         set_view("home")
 
 # 📋 LEDGER
 elif view == "ledger":
-    st.subheader("📋 CONSTRUCTION LEDGER (MOBILE VIEW)")
+    st.subheader("📋 CONSTRUCTION LEDGER")
 
     if not st.session_state.records:
         st.info("No transaction records found in ledger.")
@@ -783,7 +1150,7 @@ elif view == "ledger":
             📅 {r['date']}
             """)
 
-            if st.button("❌ DELETE", key=f"del_{r['id']}", use_container_width=True):
+            if st.button("❌ DELETE ENTRY", key=f"del_{r['id']}", use_container_width=True):
                 st.session_state.records = [
                     x for x in st.session_state.records if x["id"] != r["id"]
                 ]
@@ -795,9 +1162,9 @@ elif view == "export":
     st.subheader("📤 EXPORT CONSTRUCTION REPORT")
 
     html = build_html_report(st.session_state.records, st.session_state.budget)
-    receipt_title = st.text_input("Receipt title", value="Construction Receipt", placeholder="Enter a title for this receipt")
+    receipt_title = st.text_input("Receipt Title", value="Construction Receipt", placeholder="Enter a title for this receipt")
 
-    if st.button("💾 Save this receipt to archive", use_container_width=True):
+    if st.button("💾 SAVE RECEIPT TO ARCHIVE", use_container_width=True):
         if receipt_title.strip():
             archive_path = save_report_html("construction", html, title=receipt_title)
             st.success(f"Saved to archive: {archive_path}")
@@ -805,14 +1172,14 @@ elif view == "export":
             st.warning("Please enter a title before saving.")
 
     st.download_button(
-        label="⬇️ Download current construction report",
+        label="⬇️ DOWNLOAD CONSTRUCTION REPORT",
         data=html,
-        file_name="aily_mobile_report.html",
+        file_name="construction_report.html",
         mime="text/html",
         use_container_width=True
     )
 
-    if st.button("📁 Open receipt archive", use_container_width=True):
+    if st.button("📁 OPEN RECEIPT ARCHIVE", use_container_width=True):
         set_view("receipt_archive")
 
     st.markdown("📧 **Receivers Enabled:**")
@@ -825,65 +1192,76 @@ elif view == "add_labor":
     st.subheader("👷 ADD LABOR")
     with st.form(key="labor_form", clear_on_submit=True):
         name = st.text_input("Worker Name")
-        days = st.number_input("Days Worked (e.g., 1 or 0.5)", min_value=0.5, value=1.0, step=0.5)
+        days = st.number_input("Days Worked (e.g., 1 or 0.5)", min_value=0.5, value=None, step=0.5, placeholder="1.0")
         rate_option = st.radio("Rates", ["800", "650", "500"])
         rate = 800 if rate_option == "800" else 650 if rate_option == "650" else 500
-        ca = st.number_input("Cash Advance", min_value=0.0, value=0.0)
+        ca = st.number_input("Cash Advance", min_value=0.0, value=None, placeholder="0.00")
         
         submitted = st.form_submit_button("SAVE LABOR")
         
     if submitted:
-        net = (days * rate) - ca
-        st.session_state.labor_records.append({
-            "name": name.upper(),
-            "days": days,
-            "rate": rate,
-            "ca": ca,
-            "net": net
-        })
-        persist_state()
-        st.success(f"Record for {name.upper()} added.")
-        st.rerun()
+        d = float(days or 0.0)
+        c = float(ca or 0.0)
+        if d > 0:
+            net = (d * rate) - c
+            st.session_state.labor_records.append({
+                "name": name.upper(),
+                "days": d,
+                "rate": rate,
+                "ca": c,
+                "net": net
+            })
+            persist_state()
+            st.success(f"Record for {name.upper()} added.")
+            st.rerun()
+        else:
+            st.warning("Please enter valid days worked.")
 
 elif view == "add_payroll_expense":
     st.subheader("📝 ADD PAYROLL EXPENSE")
     with st.form(key="payroll_expense_form", clear_on_submit=True):
         desc = st.text_input("Expense Description")
-        amt = st.number_input("Amount", min_value=0.01, value=0.01)
+        amt = st.number_input("Amount", min_value=0.01, value=None, placeholder="0.00")
         
         submitted = st.form_submit_button("SAVE EXPENSE")
         
     if submitted:
-        st.session_state.payroll_expenses.append({
-            "item": desc.upper(),
-            "price": amt
-        })
-        persist_state()
-        st.success(f"Expense {desc.upper()} added.")
-        st.rerun()
+        if amt and amt > 0:
+            st.session_state.payroll_expenses.append({
+                "item": desc.upper(),
+                "price": float(amt)
+            })
+            persist_state()
+            st.success(f"Expense {desc.upper()} added.")
+            st.rerun()
+        else:
+            st.warning("Please enter a valid amount.")
 
 elif view == "payroll_remaining":
     st.subheader("➖ SET REMAINING MONEY")
-    res = st.number_input("Leftover/Remaining money to subtract from total", min_value=0.0, value=st.session_state.remaining_money)
-    if st.button("Apply"):
-        st.session_state.remaining_money = res
-        persist_state()
-        st.success("Remaining money applied.")
-        st.rerun()
+    res = st.number_input("Leftover/Remaining money to subtract from total", min_value=0.0, value=None, placeholder="0.00")
+    if st.button("APPLY REMAINING MONEY", use_container_width=True):
+        if res is not None:
+            st.session_state.remaining_money = float(res)
+            persist_state()
+            st.success("Remaining money applied.")
+            st.rerun()
+        else:
+            st.warning("Please enter an amount.")
 
 elif view == "payroll_ledger":
     st.subheader("📋 LABOR & PAYROLL LEDGER")
     st.markdown("### Labor Records")
     if not st.session_state.labor_records:
         st.info("No labor records.")
-    for i, r in enumerate(st.session_state.labor_records):
+    for i, r in enumerate(list(st.session_state.labor_records)):
         st.markdown(f"""
         ---
         **{r['name']}** - Days: {r['days']} | Rate: {r['rate']}  
         - C.A.: PHP {r['ca']:,.2f}  
         - **Net Pay: PHP {r['net']:,.2f}**
         """)
-        if st.button("Delete Labor", key=f"del_lab_{i}"):
+        if st.button("❌ DELETE LABOR ENTRY", key=f"del_lab_{i}", use_container_width=True):
             st.session_state.labor_records.pop(i)
             persist_state()
             st.rerun()
@@ -892,26 +1270,26 @@ elif view == "payroll_ledger":
     st.markdown("### Payroll Expenses")
     if not st.session_state.payroll_expenses:
         st.info("No payroll expenses.")
-    for i, e in enumerate(st.session_state.payroll_expenses):
+    for i, e in enumerate(list(st.session_state.payroll_expenses)):
         st.markdown(f"""
         - **{e['item']}**: PHP {e['price']:,.2f}
         """)
-        if st.button("Delete Payroll Expense", key=f"del_pay_exp_{i}"):
+        if st.button("❌ DELETE PAYROLL EXPENSE", key=f"del_pay_exp_{i}", use_container_width=True):
             st.session_state.payroll_expenses.pop(i)
             persist_state()
             st.rerun()
 
 elif view == "payroll_export":
-    st.subheader("📤 GENERATE PAYROLL REPORT")
+    st.subheader("📤 EXPORT PAYROLL REPORT")
     
     html, total = generate_payroll_html(
         st.session_state.labor_records, 
         st.session_state.payroll_expenses, 
         st.session_state.remaining_money
     )
-    receipt_title = st.text_input("Receipt title", value="Payroll Receipt", placeholder="Enter a title for this receipt")
+    receipt_title = st.text_input("Receipt Title", value="Payroll Receipt", placeholder="Enter a title for this receipt")
     
-    if st.button("💾 Save this receipt to archive", use_container_width=True):
+    if st.button("💾 SAVE RECEIPT TO ARCHIVE", use_container_width=True):
         if receipt_title.strip():
             archive_path = save_report_html("payroll", html, title=receipt_title)
             st.success(f"Saved to archive: {archive_path}")
@@ -919,17 +1297,17 @@ elif view == "payroll_export":
             st.warning("Please enter a title before saving.")
     
     st.download_button(
-        label="⬇️ Download current payroll report",
+        label="⬇️ DOWNLOAD PAYROLL REPORT",
         data=html,
         file_name="payroll_report.html",
         mime="text/html",
         use_container_width=True
     )
 
-    if st.button("📁 Open receipt archive", use_container_width=True):
+    if st.button("📁 OPEN RECEIPT ARCHIVE", use_container_width=True):
         set_view("receipt_archive")
     
-    if st.button("📧 Email Report"):
+    if st.button("📧 EMAIL PAYROLL REPORT", use_container_width=True):
         try:
             msg = EmailMessage()
             msg['Subject'] = f"Construction Report: PHP {total:,.2f} - {datetime.now().strftime('%Y-%m-%d')}"
@@ -947,9 +1325,9 @@ elif view == "receipt_archive":
     st.subheader("📁 RECEIPT ARCHIVE")
     st.caption("Browse saved receipts in neat construction and payroll folders.")
 
-    if st.button("⬅️ Back to construction export", use_container_width=True):
+    if st.button("⬅️ BACK TO CONSTRUCTION EXPORT", use_container_width=True):
         set_view("export")
-    if st.button("⬅️ Back to payroll export", use_container_width=True):
+    if st.button("⬅️ BACK TO PAYROLL EXPORT", use_container_width=True):
         set_view("payroll_export")
 
     for title, report_type in [("🏗️ Construction Receipts", "construction"), ("👷 Payroll Receipts", "payroll")]:
@@ -964,17 +1342,17 @@ elif view == "receipt_archive":
                 with open(report_path, "r", encoding="utf-8") as handle:
                     report_html = handle.read()
                 st.download_button(
-                    label="⬇️ Download this receipt",
+                    label="⬇️ DOWNLOAD THIS RECEIPT",
                     data=report_html,
                     file_name=report_path.name,
                     mime="text/html",
                     use_container_width=True,
                     key=f"download_{report_type}_{report_path.name}"
                 )
-                if st.button("🗑️ Delete this receipt", key=f"delete_{report_type}_{report_path.name}", use_container_width=True):
+                if st.button("🗑️ DELETE THIS RECEIPT", key=f"delete_{report_type}_{report_path.name}", use_container_width=True):
                     delete_report_file(report_path)
                     st.success(f"Deleted: {report_path.name}")
                     st.rerun()
-            
+
 else:
     st.info("Welcome to AILY OS. Use the sidebar to navigate.")
