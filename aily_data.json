@@ -1,20 +1,39 @@
 {
   "records": [
     {
-      "id": "1784569803.4194322",
-      "date": "Jul 20, 2026",
-      "name": "SFS",
-      "price": 3.0,
-      "qty": 32,
-      "delivery": 321.0,
-      "amount": 417.0,
+      "id": "1784592892.2089252",
+      "date": "Jul 21, 2026",
+      "name": "CEMENT",
+      "price": 1000.0,
+      "qty": 50,
+      "delivery": 0.0,
+      "amount": 50000.0,
       "type": "material",
+      "sender": "Garr"
+    },
+    {
+      "id": "1784593162.6170902",
+      "date": "Jul 21, 2026",
+      "name": "44",
+      "price": 10000.0,
+      "qty": 1,
+      "delivery": 0.0,
+      "amount": 10000.0,
+      "type": "excess",
       "sender": "Garr"
     }
   ],
-  "labor_records": [],
+  "labor_records": [
+    {
+      "name": "CEEEE",
+      "days": 6.0,
+      "rate": 800,
+      "ca": 0.0,
+      "net": 4800.0
+    }
+  ],
   "payroll_expenses": [],
   "budget": 0.0,
-  "remaining_money": 0.0,
-  "view": "planner_input"
+  "remaining_money": 3000.0,
+  "view": "receipt_archive"
 }

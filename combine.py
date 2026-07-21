@@ -145,9 +145,12 @@ def add_tx(name, price, qty, delivery, ttype, sender):
 
 # ═════════════════ REPORT MANAGER (MATERIAL) ═════════════════
 def build_html_report(records, budget):
-    material_total = total_materials()
-    expense_total = total_expenses()
-    excess_total = total_excess()
+    # Exclude excess items from main materials table & total materials calculation
+    material_and_expense_records = [r for r in records if r["type"] in ["material", "expense"]]
+    excess_records = [r for r in records if r["type"] == "excess"]
+
+    material_total = sum(r["amount"] for r in material_and_expense_records)
+    excess_total = sum(r["amount"] for r in excess_records)
     remaining_balance = get_balance()
     date_now = datetime.now().strftime("%B %d, %Y")
 
@@ -227,7 +230,7 @@ def build_html_report(records, budget):
             <tbody>
 """
 
-    for r in records:
+    for r in material_and_expense_records:
         html += f"""
                 <tr>
                     <td>{r['date']}</td>
@@ -249,11 +252,11 @@ def build_html_report(records, budget):
                     <div class="balance-info">
                         <div class="balance-row material-row">
                             <span>Material/Expense Total:</span>
-                            <span>PHP {material_total + expense_total:,.2f}</span>
+                            <span>PHP {material_total:,.2f}</span>
                         </div>
-                        <div class="balance-row" style="font-size: 13px;">
+                        <div class="balance-row" style="font-size: 13px; margin-top: 4px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 4px;">
                             <span>Excess Money Total:</span>
-                            <span>PHP {excess_total:,.2f}</span>
+                            <span style="color: #a5d6a7;">PHP {excess_total:,.2f}</span>
                         </div>
                         <div class="balance-row" style="font-size: 13px;">
                             <span>Total Budget:</span>
@@ -505,6 +508,49 @@ st.markdown("""
     --accent: #4ade80;
 }
 
+/* UNIVERSAL MOBILE & NUMBER FIXES */
+
+/* 1. Remove native +/- step arrows from number inputs */
+input[type=number]::-webkit-inner-spin-button, 
+input[type=number]::-webkit-outer-spin-button { 
+  -webkit-appearance: none !important; 
+  margin: 0 !important; 
+}
+input[type=number] {
+  -moz-appearance: textfield !important;
+}
+
+/* 2. Streamlit specific stepper button removal */
+div[data-testid="stNumberInput"] button {
+    display: none !important;
+}
+
+/* 3. Universal legible input styling across Mobile, Tablet, and Laptop */
+div[data-baseweb="input"], 
+div[data-baseweb="base-input"],
+input, textarea, select {
+    background-color: rgba(16, 45, 28, 0.95) !important;
+    border: 1px solid rgba(132, 255, 179, 0.4) !important;
+    border-radius: 12px !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    font-size: 16px !important;
+    min-height: 48px !important;
+    box-shadow: none !important;
+}
+
+input::placeholder, textarea::placeholder {
+    color: #a7f3d0 !important;
+    -webkit-text-fill-color: #a7f3d0 !important;
+    opacity: 0.7;
+}
+
+/* Input focus glow */
+div[data-baseweb="input"]:focus-within, input:focus, textarea:focus {
+    border-color: #4ade80 !important;
+    box-shadow: 0 0 10px rgba(74, 222, 128, 0.4) !important;
+}
+
 @media (max-width: 768px) {
     .block-container {
         padding: 16px 12px !important;
@@ -518,9 +564,6 @@ st.markdown("""
         margin-bottom: 8px !important;
         font-size: 15px !important;
         padding: 12px !important;
-    }
-    input {
-        font-size: 16px !important;
     }
     .stColumns {
         flex-direction: column !important;
@@ -536,7 +579,7 @@ st.markdown("""
 }
 
 .block-container {
-    background: rgba(12, 32, 22, 0.74) !important;
+    background: rgba(12, 32, 22, 0.82) !important;
     backdrop-filter: blur(22px);
     border-radius: 28px;
     border: 1px solid rgba(132, 255, 179, 0.18);
@@ -547,7 +590,7 @@ st.markdown("""
 }
 
 section[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, rgba(12, 45, 28, 0.94) 0%, rgba(6, 26, 16, 0.96) 100%) !important;
+    background: linear-gradient(180deg, rgba(12, 45, 28, 0.96) 0%, rgba(6, 26, 16, 0.98) 100%) !important;
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border-right: 1px solid rgba(132, 255, 179, 0.22);
@@ -669,23 +712,6 @@ button:active, .stDownloadButton > button:active {
     font-weight: 800;
 }
 
-input, textarea, select {
-    background: rgba(255, 255, 255, 0.1) !important;
-    border: 1px solid rgba(132, 255, 179, 0.25) !important;
-    color: #f8fff9 !important;
-    border-radius: 14px !important;
-    backdrop-filter: blur(10px);
-    font-size: 15px !important;
-    min-height: 44px;
-    padding: 8px 12px;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-input:focus, textarea:focus, select:focus {
-    border-color: #4ade80 !important;
-    box-shadow: 0 0 12px rgba(74, 222, 128, 0.3);
-}
-
 h1, h2, h3 {
     color: #ecfff1 !important;
     text-shadow: 0 0 8px rgba(34, 197, 94, 0.22);
@@ -713,7 +739,6 @@ h1, h2, h3 {
     font-size: 12px;
 }
 
-/* CALENDAR CARD LIST STYLING */
 .cal-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
